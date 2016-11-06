@@ -11,9 +11,12 @@
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
     
-    <!--
     <dependencies>
+        <dependency>
+            <groupId>com.urswolfer.gerrit.client.rest</groupId>
+            <artifactId>gerrit-rest-java-client</artifactId>
+            <version>0.8.8</version>
+        </dependency>
     </dependencies>
-    -->
     
 </project>
