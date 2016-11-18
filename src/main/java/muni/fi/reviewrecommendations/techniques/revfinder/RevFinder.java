@@ -1,4 +1,4 @@
-package muni.fi.reviewRecommendations.techniques.revfinder;
+package muni.fi.reviewrecommendations.techniques.revfinder;
 
 import java.util.ArrayList;
 import java.util.Collections;
