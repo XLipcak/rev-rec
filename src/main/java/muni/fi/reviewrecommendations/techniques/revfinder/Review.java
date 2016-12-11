@@ -1,6 +1,7 @@
 package muni.fi.reviewrecommendations.techniques.revfinder;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  *
@@ -8,18 +9,18 @@ import java.util.Date;
  */
 public class Review {
 
-    private String[] filePaths;
+    private List<String> filePaths;
     private String[] reviewers;
     private Date date;
 
     public Review() {
     }
 
-    public String[] getFilePaths() {
+    public List<String> getFilePaths() {
         return filePaths;
     }
 
-    public void setFilePaths(String[] filePaths) {
+    public void setFilePaths(List<String> filePaths) {
         this.filePaths = filePaths;
     }
 

@@ -1,10 +1,6 @@
 package muni.fi.reviewrecommendations.techniques.revfinder;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -29,13 +25,13 @@ public class RevFinder {
         Review review1 = new Review();
         String[] filePaths1 = {"a/b/c", "a/123"};
         String[] reviewers1 = {"X1"};
-        review1.setFilePaths(filePaths1);
+        review1.setFilePaths(Arrays.asList(filePaths1));
         review1.setReviewers(reviewers1);
 
         Review review2 = new Review();
         String[] filePaths2 = {"a/b/c", "a/b/123"};
         String[] reviewers2 = {"X2", "X3"};
-        review2.setFilePaths(filePaths2);
+        review2.setFilePaths(Arrays.asList(filePaths2));
         review2.setReviewers(reviewers2);
 
         allPreviousReviews = new Review[2];
@@ -49,8 +45,8 @@ public class RevFinder {
                 stringComparisonTechnique++) {
             reviewerCandidates.add(new HashMap<>());
             for (Review rev : allPreviousReviews) {
-                String[] newReviewFilePaths = review.getFilePaths();
-                String[] revFilePaths = rev.getFilePaths();
+                List<String> newReviewFilePaths = review.getFilePaths();
+                List<String> revFilePaths = rev.getFilePaths();
                 double score = 0;
 
                 for (String newReviewFilePath : newReviewFilePaths) {
@@ -60,7 +56,7 @@ public class RevFinder {
                     }
                 }
 
-                score = score / (double) (newReviewFilePaths.length * revFilePaths.length);
+                score = score / (double) (newReviewFilePaths.size() * revFilePaths.size());
 
                 for (String codeReviewer : rev.getReviewers()) {
                     if (reviewerCandidates.get(stringComparisonTechnique).containsKey(codeReviewer)) {

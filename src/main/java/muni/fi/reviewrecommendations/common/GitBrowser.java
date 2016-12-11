@@ -1,5 +1,6 @@
 package muni.fi.reviewrecommendations.common;
 
+import muni.fi.reviewrecommendations.techniques.reviewbot.CommitAndPathWrapper;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -29,7 +30,7 @@ public class GitBrowser {
 
     private boolean followFlag;
     private Git git;
-    Repository repository;
+    private Repository repository;
 
 
     public GitBrowser(String repositoryPath, boolean followFlag) throws IOException {
@@ -40,11 +41,15 @@ public class GitBrowser {
     }
 
 
-    public List<RevCommit> getFileCommitHistory(String filePath) {
+    public List<CommitAndPathWrapper> getFileCommitHistory(String filePath) {
         if (followFlag) {
             return getFileCommitHistoryWithRenames(filePath);
         } else {
-            return getFileCommitHistoryWithoutRenames(filePath);
+            List<CommitAndPathWrapper> result = new ArrayList<>();
+            for (RevCommit revCommit : getFileCommitHistoryWithoutRenames(filePath)) {
+                result.add(new CommitAndPathWrapper(revCommit, filePath));
+            }
+            return result;
         }
     }
 
@@ -68,8 +73,8 @@ public class GitBrowser {
     /**
      * Returns the result of a git log --follow -- < path >
      */
-    private ArrayList<RevCommit> getFileCommitHistoryWithRenames(String filePath) {
-        ArrayList<RevCommit> commits = new ArrayList<RevCommit>();
+    private ArrayList<CommitAndPathWrapper> getFileCommitHistoryWithRenames(String filePath) {
+        ArrayList<CommitAndPathWrapper> commits = new ArrayList<CommitAndPathWrapper>();
         RevCommit start = null;
         try {
             do {
@@ -80,7 +85,7 @@ public class GitBrowser {
                         start = null;
                     } else {
                         start = commit;
-                        commits.add(commit);
+                        commits.add(new CommitAndPathWrapper(commit, filePath));
                     }
                 }
                 if (start == null) return commits;
@@ -144,16 +149,21 @@ public class GitBrowser {
         DiffFormatter formatter = new DiffFormatter(outputStream);
         formatter.setRepository(git.getRepository());
 
-        if(filePath != null){
+        if (filePath != null) {
             formatter.setPathFilter(PathFilter.create(filePath));
         }
 
         List<DiffEntry> entries = formatter.scan(diffWith, headCommit);
         //formatter.format(entries.get(0)); //to be deleted
-        FileHeader fileHeader = formatter.toFileHeader(entries.get(0));
-        EditList edits = fileHeader.toEditList();
+        if (entries.size() > 0) {
+            FileHeader fileHeader = formatter.toFileHeader(entries.get(0));
+            EditList edits = fileHeader.toEditList();
 
-        return edits;
+            return edits;
+        } else {
+            return new EditList();
+        }
+
     }
 
     public Repository getRepository() {
@@ -163,4 +173,6 @@ public class GitBrowser {
     public void setRepository(Repository repository) {
         this.repository = repository;
     }
+
+
 }
