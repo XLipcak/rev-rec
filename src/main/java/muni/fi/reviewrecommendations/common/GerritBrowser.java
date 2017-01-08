@@ -7,6 +7,7 @@ import com.google.gerrit.extensions.common.FileInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import com.urswolfer.gerrit.client.rest.GerritAuthData;
 import com.urswolfer.gerrit.client.rest.GerritRestApiFactory;
+import com.urswolfer.gerrit.client.rest.http.HttpStatusException;
 
 import java.util.*;
 
@@ -28,6 +29,10 @@ public class GerritBrowser {
             ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
             return changeInfo.reviewers.values().iterator().next();
         }catch (NoSuchElementException ex){
+            return new ArrayList<>();
+        }catch (IllegalArgumentException ex){
+            return new ArrayList<>();
+        }catch (HttpStatusException ex){
             return new ArrayList<>();
         }
     }

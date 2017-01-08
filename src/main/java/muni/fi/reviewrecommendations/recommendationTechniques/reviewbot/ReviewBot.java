@@ -1,10 +1,12 @@
-package muni.fi.reviewrecommendations.techniques.reviewbot;
+package muni.fi.reviewrecommendations.recommendationTechniques.reviewbot;
 
 import com.google.gerrit.extensions.common.AccountInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.common.GitBrowser;
-import muni.fi.reviewrecommendations.techniques.revfinder.Review;
+import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
+import muni.fi.reviewrecommendations.recommendationTechniques.revfinder.Review;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.lib.ObjectId;
@@ -26,23 +28,20 @@ import java.util.stream.Collectors;
  *
  * @author Jakub Lipcak, Masaryk University
  */
-public class ReviewBot {
+public class ReviewBot implements ReviewerRecommendation {
 
     private GitBrowser gitBrowser;
     private GerritBrowser gerritBrowser;
     private static final int INITIAL_POINT = 1;
     private static final double CONSTANT_FACTOR = 0.9;
 
-    public ReviewBot(String gitRepositoryPath, String gerritRepositoryPath) {
-        try {
-            this.gitBrowser = new GitBrowser(gitRepositoryPath, true);
-            this.gerritBrowser = new GerritBrowser(gerritRepositoryPath);
-        } catch (IOException e) {
-            e.printStackTrace(); //TODO: should be handled in GitBrowser
-        }
+    public ReviewBot(GitBrowser gitBrowser, GerritBrowser gerritBrowser) {
+        this.gitBrowser = gitBrowser;
+        this.gerritBrowser = gerritBrowser;
     }
 
-    public Map<RevCommit, Double> reviewersRankingAlgorithm(Review review) throws IOException, RestApiException {
+    @Override
+    public Map<Reviewer, Double> reviewersRankingAlgorithm(Review review) {
 
         Map<RevCommit, Double> resultMap = new HashMap<>();
         for (String filePath : review.getFilePaths()) {
@@ -66,56 +65,47 @@ public class ReviewBot {
             }
         }
 
-       /* Iterator it = resultMap.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry)it.next();
-            System.out.println(pair.getKey() + " - " + pair.getValue());
-            it.remove();
-        }*/
-
-        printReviewerNames(propagateResultToUserPoints(resultMap));
-        return resultMap;
-    }
-
-    private void printReviewerNames(Map<AccountInfo, Double> reviewers) {
-        for (Map.Entry<AccountInfo, Double> entry : reviewers.entrySet()) {
-            System.out.println(entry.getKey().name + "/" + entry.getValue());
-        }
+        return propagateResultToUserPoints(resultMap);
     }
 
 
-    private Map<AccountInfo, Double> propagateResultToUserPoints(Map<RevCommit, Double> pointsMap) throws RestApiException {
+    private Map<Reviewer, Double> propagateResultToUserPoints(Map<RevCommit, Double> pointsMap) {
         Map<AccountInfo, Double> reviewerCandidates = new HashMap<>();
         Set<String> emails = new HashSet<>();
 
-        Iterator it = pointsMap.entrySet().iterator();
-        while (it.hasNext()) {
-            Map.Entry pair = (Map.Entry) it.next();
-            for (AccountInfo user : getUserRelatedToCommit((RevCommit) pair.getKey())) {
-                if (reviewerCandidates.containsKey(user)) {
-                    reviewerCandidates.replace(user, reviewerCandidates.get(user) + (Double) pair.getValue());
-                } else {
-                    reviewerCandidates.put(user, (Double) pair.getValue());
-                    emails.add(user.email);
+        try {
+            Iterator it = pointsMap.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry pair = (Map.Entry) it.next();
+                for (AccountInfo user : getUserRelatedToCommit((RevCommit) pair.getKey())) {
+                    if (reviewerCandidates.containsKey(user)) {
+                        reviewerCandidates.replace(user, reviewerCandidates.get(user) + (Double) pair.getValue());
+                    } else {
+                        reviewerCandidates.put(user, (Double) pair.getValue());
+                        emails.add(user.email);
+                    }
                 }
+                it.remove();
             }
-            it.remove();
-        }
 
-        //normalisation, to refactor later
-        Map<AccountInfo, Double> result = new HashMap<>();
-        for (String email : emails) {
-            double points = 0;
-            AccountInfo accountInfo = null;
-            for (Map.Entry<AccountInfo, Double> entry : reviewerCandidates.entrySet()) {
-                if (entry.getKey().email.equals(email)) {
-                    points += entry.getValue();
-                    accountInfo = entry.getKey();
+            //normalisation, to refactor later
+            Map<Reviewer, Double> result = new HashMap<>();
+            for (String email : emails) {
+                double points = 0;
+                AccountInfo accountInfo = null;
+                for (Map.Entry<AccountInfo, Double> entry : reviewerCandidates.entrySet()) {
+                    if (entry.getKey().email.equals(email)) {
+                        points += entry.getValue();
+                        accountInfo = entry.getKey();
+                    }
                 }
+                result.put(new Reviewer(accountInfo.email, accountInfo.name), points);
             }
-            result.put(accountInfo, points);
+            return sortByValue(result);
+        } catch (RestApiException ex) {
+            //TODO: handle exception
         }
-        return sortByValue(result);
+        return new HashMap<>();
     }
 
     private List<AccountInfo> getUserRelatedToCommit(RevCommit commit) throws RestApiException {
@@ -142,78 +132,84 @@ public class ReviewBot {
         return INITIAL_POINT;
     }
 
-    private List<List<RevCommit>> lineChangeHistory(String filePath, Set<Integer> lines, List<CommitAndPathWrapper> fileCommitHistory) throws IOException {
+    private List<List<RevCommit>> lineChangeHistory(String filePath, Set<Integer> lines, List<CommitAndPathWrapper> fileCommitHistory) {
         List<List<RevCommit>> result = new ArrayList<>();
 
-        Integer[] linesArray = lines.toArray(new Integer[lines.size()]);
-        int[][] lineHistoryMatrix = generateLineHistoryMatrix(filePath, linesArray, fileCommitHistory);
-        boolean[][] trackingMatrix = generateTrackingMatrix(filePath, linesArray, fileCommitHistory, lineHistoryMatrix);
-        List<Set<Integer>> alreadyCheckedLines = new ArrayList<Set<Integer>>();
-        for (int x = 0; x < fileCommitHistory.size(); x++) {
-            alreadyCheckedLines.add(new HashSet<>());
-        }
+        try {
 
-        for (int x = 0; x < fileCommitHistory.size(); x++) {
-            System.out.println(getChangeIdFromFooter(fileCommitHistory.get(x).getRevCommit().getFooterLines()));
-        }
-        for (int index = 0; index < lines.size(); index++) {
-            List<RevCommit> resultForActualLine = new ArrayList<>();
-            for (int x = 1; x < fileCommitHistory.size(); x++) {
-                //System.out.println(getChangeIdFromFooter(fileCommitHistory.get(x).getRevCommit().getFooterLines()));
-                if (trackingMatrix[index][x]) {
-                    continue;
-                }
-                if (x == fileCommitHistory.size() - 1) {
-                    resultForActualLine.add(fileCommitHistory.get(x).getRevCommit());
-                    System.out.println("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
-                    break;
-                }
-                if (!fileCommitHistory.get(x).getPath().equals(fileCommitHistory.get(x).getPath())) {
-                    x++;
-                    continue;
-                }
 
-                int actualLine = linesArray[index] + lineHistoryMatrix[index][x + 1];
+            Integer[] linesArray = lines.toArray(new Integer[lines.size()]);
+            int[][] lineHistoryMatrix = generateLineHistoryMatrix(filePath, linesArray, fileCommitHistory);
+            boolean[][] trackingMatrix = generateTrackingMatrix(filePath, linesArray, fileCommitHistory, lineHistoryMatrix);
+            List<Set<Integer>> alreadyCheckedLines = new ArrayList<Set<Integer>>();
+            for (int x = 0; x < fileCommitHistory.size(); x++) {
+                alreadyCheckedLines.add(new HashSet<>());
+            }
 
-                RevCommit headCommit = fileCommitHistory.get(x).getRevCommit();
-                RevCommit diffWith = fileCommitHistory.get(x + 1).getRevCommit();
-                EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath());
-
-                for (Edit edit : edits) {
-                    if (edit.getType() == Edit.Type.REPLACE) {
-                        //int lineDifferenceInReplace = (edit.getEndA() - edit.getBeginA()) - (edit.getEndB() - edit.getBeginB());
-                        if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
-                            resultForActualLine.add(headCommit);
-                            System.out.println("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
-                        }
+            for (int x = 0; x < fileCommitHistory.size(); x++) {
+                System.out.println(getChangeIdFromFooter(fileCommitHistory.get(x).getRevCommit().getFooterLines()));
+            }
+            for (int index = 0; index < lines.size(); index++) {
+                List<RevCommit> resultForActualLine = new ArrayList<>();
+                for (int x = 1; x < fileCommitHistory.size(); x++) {
+                    //System.out.println(getChangeIdFromFooter(fileCommitHistory.get(x).getRevCommit().getFooterLines()));
+                    if (trackingMatrix[index][x]) {
+                        continue;
+                    }
+                    if (x == fileCommitHistory.size() - 1) {
+                        resultForActualLine.add(fileCommitHistory.get(x).getRevCommit());
+                        System.out.println("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                        break;
+                    }
+                    if (!fileCommitHistory.get(x).getPath().equals(fileCommitHistory.get(x).getPath())) {
+                        x++;
+                        continue;
                     }
 
-                    if (edit.getType() == Edit.Type.INSERT) {
-                        if (linesArray[index] + lineHistoryMatrix[index][x] >= edit.getBeginB() + 1 && linesArray[index] + lineHistoryMatrix[index][x] <= edit.getEndB())/*(edit.getEndA() + 1 == actualLine)*//*(edit.getBeginA() < actualLine && actualLine <= edit.getEndA() + (edit.getEndB() - edit.getEndA()))*/ {
+                    int actualLine = linesArray[index] + lineHistoryMatrix[index][x + 1];
+
+                    RevCommit headCommit = fileCommitHistory.get(x).getRevCommit();
+                    RevCommit diffWith = fileCommitHistory.get(x + 1).getRevCommit();
+                    EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath());
+
+                    for (Edit edit : edits) {
+                        if (edit.getType() == Edit.Type.REPLACE) {
+                            //int lineDifferenceInReplace = (edit.getEndA() - edit.getBeginA()) - (edit.getEndB() - edit.getBeginB());
+                            if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
+                                resultForActualLine.add(headCommit);
+                                System.out.println("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                            }
+                        }
+
+                        if (edit.getType() == Edit.Type.INSERT) {
+                            if (linesArray[index] + lineHistoryMatrix[index][x] >= edit.getBeginB() + 1 && linesArray[index] + lineHistoryMatrix[index][x] <= edit.getEndB())/*(edit.getEndA() + 1 == actualLine)*//*(edit.getBeginA() < actualLine && actualLine <= edit.getEndA() + (edit.getEndB() - edit.getEndA()))*/ {
                             /*if (alreadyCheckedLines.get(x).contains(actualLine)) {
                                 continue;
                             }*/
-                            alreadyCheckedLines.get(x).add(actualLine);
+                                alreadyCheckedLines.get(x).add(actualLine);
 
-                            resultForActualLine.add(headCommit);
-                            System.out.println("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                resultForActualLine.add(headCommit);
+                                System.out.println("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                            }
+                        }
+
+                        if (edit.getType() == Edit.Type.DELETE) {
+                            if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
+                                //resultForActualLine.add(headCommit);
+                                System.out.println("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                            }
                         }
                     }
 
-                    if (edit.getType() == Edit.Type.DELETE) {
-                        if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
-                            //resultForActualLine.add(headCommit);
-                            System.out.println("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
-                        }
-                    }
-                }
-
-                //logging
+                    //logging
             /*System.out.println("Head: " + headCommit.getShortMessage());
             System.out.println("Diff with: " + diffWith.getShortMessage());
             System.out.println(edits);*/
+                }
+                result.add(resultForActualLine);
             }
-            result.add(resultForActualLine);
+        } catch (IOException ex) {
+            //TODO: handle exception
         }
 
         return result;
@@ -322,27 +318,31 @@ public class ReviewBot {
         return trackingMatrix;
     }
 
-    private Set<Integer> getLinesAffectedByCommit(RevCommit headCommit, RevCommit diffWith, String filePath) throws
-            IOException {
-        Set<Integer> result = new LinkedHashSet<>();
-        EditList edits = gitBrowser.diff(headCommit, diffWith, filePath);
+    private Set<Integer> getLinesAffectedByCommit(RevCommit headCommit, RevCommit diffWith, String filePath) {
+        try {
+            Set<Integer> result = new LinkedHashSet<>();
+            EditList edits = gitBrowser.diff(headCommit, diffWith, filePath);
 
-        for (Edit edit : edits) {
-            if (edit.getType() == Edit.Type.INSERT) {
-                result.add(getNearestLineOfCode(headCommit, filePath, edit.getBeginB() + 1));
-            }
-            if (edit.getType() == Edit.Type.DELETE) {
-                for (int x = edit.getBeginA() + 1; x <= edit.getEndA(); x++) {
-                    result.add(x);
+            for (Edit edit : edits) {
+                if (edit.getType() == Edit.Type.INSERT) {
+                    result.add(getNearestLineOfCode(headCommit, filePath, edit.getBeginB() + 1));
+                }
+                if (edit.getType() == Edit.Type.DELETE) {
+                    for (int x = edit.getBeginA() + 1; x <= edit.getEndA(); x++) {
+                        result.add(x);
+                    }
+                }
+                if (edit.getType() == Edit.Type.REPLACE) {
+                    for (int x = edit.getBeginB() + 1; x <= edit.getEndB(); x++) {
+                        result.add(x);
+                    }
                 }
             }
-            if (edit.getType() == Edit.Type.REPLACE) {
-                for (int x = edit.getBeginB() + 1; x <= edit.getEndB(); x++) {
-                    result.add(x);
-                }
-            }
+            return result;
+        } catch (IOException ex) {
+            //TODO: handle exception
         }
-        return result;
+        return new HashSet<>();
     }
 
     private int getNearestLineOfCode(RevCommit headCommit, String filePath, int lineNumber) throws IOException {
@@ -378,7 +378,7 @@ public class ReviewBot {
         } catch (Exception ex) {
             System.out.println("Exception" + ex.getMessage());
             System.out.println(lines);
-            return lineNumber -1;
+            return lineNumber - 1;
         }
 
         return lineNumber;

@@ -1,9 +1,9 @@
-package muni.fi.reviewrecommendations.techniques.reviewbot;
+package muni.fi.reviewrecommendations.recommendationTechniques.reviewbot;
 
 import org.eclipse.jgit.revwalk.RevCommit;
 
 /**
- * Created by Kubo on 10.12.2016.
+ * @author Jakub Lipcak, Masaryk University
  */
 public class CommitAndPathWrapper {
     private RevCommit revCommit;

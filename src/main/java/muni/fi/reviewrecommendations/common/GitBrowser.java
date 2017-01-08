@@ -1,6 +1,6 @@
 package muni.fi.reviewrecommendations.common;
 
-import muni.fi.reviewrecommendations.techniques.reviewbot.CommitAndPathWrapper;
+import muni.fi.reviewrecommendations.recommendationTechniques.reviewbot.CommitAndPathWrapper;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -24,8 +24,6 @@ import java.util.List;
 /**
  * @author Jakub Lipcak, Masaryk University
  */
-
-
 public class GitBrowser {
 
     private boolean followFlag;
@@ -76,10 +74,16 @@ public class GitBrowser {
     private ArrayList<CommitAndPathWrapper> getFileCommitHistoryWithRenames(String filePath) {
         ArrayList<CommitAndPathWrapper> commits = new ArrayList<CommitAndPathWrapper>();
         RevCommit start = null;
+
+        //TODO: reimplement git log --follow
+        int maxRenames = 1;
+        int renamesCounter = 0;
+
         try {
             do {
 
                 Iterable<RevCommit> log = git.log().addPath(filePath).call();
+                //List<RevCommit> testList = Lists.newArrayList(log);
                 for (RevCommit commit : log) {
                     if (commits.contains(commit)) {
                         start = null;
@@ -89,7 +93,10 @@ public class GitBrowser {
                     }
                 }
                 if (start == null) return commits;
-
+                if (renamesCounter == maxRenames) {
+                    return commits;
+                }
+                renamesCounter++;
             }
             while ((filePath = getRenamedPath(start, filePath)) != null);
         } catch (Exception e) {
@@ -112,6 +119,7 @@ public class GitBrowser {
             tw.addTree(commit.getTree());
             tw.addTree(start.getTree());
             tw.setRecursive(true);
+            //tw.setFilter(TreeFilter.);
             RenameDetector rd = new RenameDetector(repository);
             rd.addAll(DiffEntry.scan(tw));
             List<DiffEntry> files = rd.compute();
@@ -174,5 +182,19 @@ public class GitBrowser {
         this.repository = repository;
     }
 
+    public boolean isFollowFlag() {
+        return followFlag;
+    }
 
+    public void setFollowFlag(boolean followFlag) {
+        this.followFlag = followFlag;
+    }
+
+    public Git getGit() {
+        return git;
+    }
+
+    public void setGit(Git git) {
+        this.git = git;
+    }
 }
