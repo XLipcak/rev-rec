@@ -17,6 +17,7 @@ public class PullRequest {
     private Integer id;
 
     private String changeId;
+    private Integer changeNumber;
     private Long time;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -77,5 +78,13 @@ public class PullRequest {
 
     public void setProject(Project project) {
         this.project = project;
+    }
+
+    public Integer getChangeNumber() {
+        return changeNumber;
+    }
+
+    public void setChangeNumber(Integer changeNumber) {
+        this.changeNumber = changeNumber;
     }
 }

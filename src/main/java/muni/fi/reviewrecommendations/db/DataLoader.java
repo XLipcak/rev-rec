@@ -2,6 +2,7 @@ package muni.fi.reviewrecommendations.db;
 
 import com.google.common.collect.Lists;
 import com.google.gerrit.extensions.common.AccountInfo;
+import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.common.GitBrowser;
@@ -41,52 +42,148 @@ public class DataLoader {
     @Autowired
     private ReviewerDAO reviewerDAO;
 
-    public void loadData(GerritBrowser gerritBrowser, GitBrowser gitBrowser, String projectName) throws GitAPIException, RestApiException {
+    public void loadDataFromGerritAndGit(GerritBrowser gerritBrowser, GitBrowser gitBrowser, String projectName) throws GitAPIException {
+        int counter = 0;
         Git git = gitBrowser.getGit();
         Project project = new Project();
-        project.setProjectName(projectName);
-        project = projectDAO.save(project);
+        if (projectDAO.findOne(projectName) != null) {
+            project = projectDAO.findOne(projectName);
+            counter = project.getPullRequestsCount();
+        } else {
+            project.setProjectName(projectName);
+            project.setPullRequestsCount(0);
+            project = projectDAO.save(project);
+        }
 
         Iterable<RevCommit> commits = git.log().call();
         List<RevCommit> commitsList = Lists.newArrayList(commits);
-        int counter = 0;
         int noEmptyListSizeCounter = 0;
-        for (RevCommit commit : commitsList) {
-            counter++;
-            List<AccountInfo> accountInfos = getUserRelatedToCommit(commit, gerritBrowser);
-            System.out.println(counter + "   " + getChangeIdFromFooter(commit.getFooterLines()) + "   " + accountInfos.size());
-            if (accountInfos.size() > 0) {
-                List<Reviewer> reviewers = new ArrayList<>();
-                for (AccountInfo accountInfo : accountInfos) {
-                    if (accountInfo.email == null) {
-                        noEmptyListSizeCounter++;
-                    } else {
-                        Reviewer reviewer = reviewerDAO.findByEmail(accountInfo.email);
-                        if (reviewer == null) {
-                            reviewerDAO.save(new Reviewer(accountInfo.email, accountInfo.name));
-                            reviewer = reviewerDAO.findByEmail(accountInfo.email);
+        try {
+            for (RevCommit commit : commitsList) {
+                String changeId = getChangeIdFromFooter(commit.getFooterLines());
+                if (pullRequestDAO.findByChangeId(changeId).size() > 0) {
+                    continue;
+                }
+                List<AccountInfo> accountInfos = getUserRelatedToCommit(commit, gerritBrowser);
+                System.out.println(counter + "   " + changeId + "   " + accountInfos.size());
+                if (accountInfos.size() > 0) {
+                    List<Reviewer> reviewers = new ArrayList<>();
+                    for (AccountInfo accountInfo : accountInfos) {
+                        if (accountInfo.email == null) {
+                            noEmptyListSizeCounter++;
+                        } else {
+                            Reviewer reviewer = reviewerDAO.findByEmail(accountInfo.email);
+                            if (reviewer == null) {
+                                Reviewer newReviewer = new Reviewer();
+                                newReviewer.setId(accountInfo._accountId);
+                                newReviewer.setEmail(accountInfo.email);
+                                newReviewer.setName(accountInfo.name);
+                                if(accountInfo.avatars.size() > 0){
+                                    newReviewer.setAvatar(accountInfo.avatars.get(0).url);
+                                }
+                                reviewerDAO.save(newReviewer);
+                                reviewer = reviewerDAO.findByEmail(accountInfo.email);
+                            }
+                            reviewers.add(reviewer);
                         }
-                        reviewers.add(reviewer);
+                    }
+
+                    PullRequest pullRequest = new PullRequest();
+                    pullRequest.setChangeId(changeId);
+                    pullRequest.setTime(gerritBrowser.getChange(changeId).created.getTime());
+                    pullRequest.setReviewers(new HashSet<>(reviewers));
+                    pullRequest.setProject(project);
+                    pullRequest.setChangeNumber(gerritBrowser.getChangeNumber(changeId));
+                    pullRequest = pullRequestDAO.save(pullRequest);
+
+                    List<String> paths = gerritBrowser.getFilePaths(changeId);
+                    for (String path : paths) {
+                        FilePath filePath = new FilePath(path, pullRequest);
+                        filePathDAO.save(filePath);
                     }
                 }
+                counter++;
+            }
+        } catch (Exception ex) {
+            project.setPullRequestsCount(counter);
+            System.out.println(ex);
+        }
+        project.setPullRequestsCount(counter);
+        projectDAO.save(project);
+        System.out.println("EntityExistsExceptions: " + noEmptyListSizeCounter);
+    }
 
-                String changeId = getChangeIdFromFooter(commit.getFooterLines());
-                PullRequest pullRequest = new PullRequest();
-                pullRequest.setChangeId(changeId);
-                pullRequest.setTime((long) commit.getCommitTime());
-                pullRequest.setReviewers(new HashSet<>(reviewers));
-                pullRequest.setProject(project);
-                pullRequest = pullRequestDAO.save(pullRequest);
+    public void loadDataFromGerrit(GerritBrowser gerritBrowser, String projectName) {
+        int counter = 0;
+        Project project = new Project();
+        if (projectDAO.findOne(projectName) != null) {
+            project = projectDAO.findOne(projectName);
+            counter = project.getPullRequestsCount();
+        } else {
+            project.setProjectName(projectName);
+            project.setPullRequestsCount(0);
+            project = projectDAO.save(project);
+        }
 
-                List<String> paths = gerritBrowser.getFilePaths(changeId);
-                for (String path : paths) {
-                    FilePath filePath = new FilePath(path, pullRequest);
-                    filePathDAO.save(filePath);
+        try {
+            List<ChangeInfo> changeInfos = null;
+            do {
+                changeInfos = gerritBrowser.getGerritChanges(counter);
+                for (ChangeInfo changeInfo : changeInfos) {
+                    counter++;
+                    String changeId = changeInfo.changeId;
+                    if (pullRequestDAO.findByChangeId(changeId).size() > 0) {
+                        continue;
+                    }
+                    if(!gerritBrowser.getChange(changeId).project.equals("platform/sdk")){
+                        continue;
+                    }
+                    List<AccountInfo> accountInfos = Lists.newArrayList(gerritBrowser.getReviewers(changeId));
+                    if (accountInfos.size() == 0) {
+                        continue;
+                    }
+                    System.out.println(counter + "   " + changeId + "   " + accountInfos.size());
+                    List<Reviewer> reviewers = new ArrayList<>();
+                    for (AccountInfo accountInfo : accountInfos) {
+                        if (accountInfo.email == null) {
+                        } else {
+                            Reviewer reviewer = reviewerDAO.findByEmail(accountInfo.email);
+                            if (reviewer == null) {
+                                Reviewer newReviewer = new Reviewer();
+                                newReviewer.setId(accountInfo._accountId);
+                                newReviewer.setEmail(accountInfo.email);
+                                newReviewer.setName(accountInfo.name);
+                                if(accountInfo.avatars.size() > 0){
+                                    newReviewer.setAvatar(accountInfo.avatars.get(0).url);
+                                }
+                                reviewerDAO.save(newReviewer);
+                                reviewer = reviewerDAO.findByEmail(accountInfo.email);
+                            }
+                            reviewers.add(reviewer);
+                        }
+                    }
+
+                    PullRequest pullRequest = new PullRequest();
+                    pullRequest.setChangeId(changeId);
+                    pullRequest.setTime(changeInfo.created.getTime());
+                    pullRequest.setReviewers(new HashSet<>(reviewers));
+                    pullRequest.setProject(project);
+                    pullRequest.setChangeNumber(gerritBrowser.getChangeNumber(changeId));
+                    pullRequest = pullRequestDAO.save(pullRequest);
+
+                    List<String> paths = gerritBrowser.getFilePaths(changeId);
+                    for (String path : paths) {
+                        FilePath filePath = new FilePath(path, pullRequest);
+                        filePathDAO.save(filePath);
+                    }
                 }
             }
-
+            while (changeInfos.get(changeInfos.size() - 1)._moreChanges != null && changeInfos.get(changeInfos.size() - 1)._moreChanges);
+        } catch (RestApiException ex) {
+            System.out.println(ex);
         }
-        System.out.println("EntityExistsExceptions: " + noEmptyListSizeCounter);
+        project.setPullRequestsCount(counter);
+        projectDAO.save(project);
     }
 
 

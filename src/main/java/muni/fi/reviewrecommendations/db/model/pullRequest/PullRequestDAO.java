@@ -12,4 +12,5 @@ import java.util.List;
 public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
     List<PullRequest> findByTimeLessThan(Long time);
     List<PullRequest> findByChangeId(String changeId);
+    List<PullRequest> findByChangeNumber(Integer changeNumber);
 }

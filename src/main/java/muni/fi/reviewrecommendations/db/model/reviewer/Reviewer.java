@@ -1,8 +1,6 @@
 package muni.fi.reviewrecommendations.db.model.reviewer;
 
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 /**
@@ -11,11 +9,11 @@ import javax.persistence.Id;
 @Entity
 public class Reviewer {
     @Id
-    @GeneratedValue(strategy = GenerationType.TABLE)
-    private Long id;
+    private Integer id;
 
     private String email;
     private String name;
+    private String avatar;
 
     public Reviewer() {
     }
@@ -39,5 +37,41 @@ public class Reviewer {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Reviewer reviewer = (Reviewer) o;
+
+        if (!id.equals(reviewer.id)) return false;
+        if (email != null ? !email.equals(reviewer.email) : reviewer.email != null) return false;
+        return name != null ? name.equals(reviewer.name) : reviewer.name == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = id.hashCode();
+        result = 31 * result + (email != null ? email.hashCode() : 0);
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        return result;
     }
 }
