@@ -65,6 +65,10 @@ public class GerritBrowser {
         }
     }
 
+    public AccountInfo getAccount(String id) throws RestApiException {
+        return gerritApi.accounts().id(id).get();
+    }
+
     public List<String> getFilePaths(String changeId) throws RestApiException {
         List<String> result = new ArrayList<>();
         Map<String, FileInfo> changeInfo = gerritApi.changes().id(changeId).revision("current").files();

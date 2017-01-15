@@ -10,7 +10,6 @@ import javax.persistence.Id;
 public class Project {
     @Id
     private String projectName;
-    private int pullRequestsCount;
 
     public Project() {
     }
@@ -25,13 +24,5 @@ public class Project {
 
     public void setProjectName(String projectName) {
         this.projectName = projectName;
-    }
-
-    public int getPullRequestsCount() {
-        return pullRequestsCount;
-    }
-
-    public void setPullRequestsCount(int pullRequestsCount) {
-        this.pullRequestsCount = pullRequestsCount;
     }
 }

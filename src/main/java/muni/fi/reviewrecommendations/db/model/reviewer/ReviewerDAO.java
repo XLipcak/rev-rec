@@ -8,6 +8,6 @@ import javax.transaction.Transactional;
  * @author Jakub Lipcak, Masaryk University
  */
 @Transactional
-public interface ReviewerDAO extends CrudRepository<Reviewer, Long> {
+public interface ReviewerDAO extends CrudRepository<Reviewer, Integer> {
     Reviewer findByEmail(String email);
 }
