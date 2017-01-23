@@ -10,7 +10,9 @@ import java.util.List;
  */
 @Transactional
 public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
+    //findByTimeLessThan
     List<PullRequest> findByTimeLessThan(Long time);
+    List<PullRequest> findByTimeLessThanAndTimeGreaterThan(Long time1, Long time2);
     List<PullRequest> findByChangeId(String changeId);
     List<PullRequest> findByChangeNumber(Integer changeNumber);
 }

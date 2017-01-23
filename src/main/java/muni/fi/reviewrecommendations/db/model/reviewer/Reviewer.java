@@ -1,5 +1,7 @@
 package muni.fi.reviewrecommendations.db.model.reviewer;
 
+import com.google.gerrit.extensions.common.AccountInfo;
+
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
@@ -16,6 +18,15 @@ public class Reviewer {
     private String avatar;
 
     public Reviewer() {
+    }
+
+    public Reviewer(AccountInfo accountInfo) {
+        this.id = accountInfo._accountId;
+        this.email = accountInfo.email;
+        this.name = accountInfo.name;
+        if (accountInfo.avatars.size() > 0) {
+            this.avatar = accountInfo.avatars.get(0).url;
+        }
     }
 
     public Reviewer(String email, String name) {

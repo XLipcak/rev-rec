@@ -113,7 +113,7 @@ public class ReviewBot implements ReviewerRecommendation {
         if (changeId.equals("")) {
             return new ArrayList<>();
         }
-        return (List<AccountInfo>) gerritBrowser.getReviewers(changeId);
+        return (List<AccountInfo>) gerritBrowser.getReviewers(changeId, "Code-Review");
     }
 
     private static <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {

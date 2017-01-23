@@ -78,7 +78,7 @@ public class ReviewerController {
                 filePaths.add(filePath.getFilePath());
             }
             review.setFilePaths(filePaths);
-            review.setReviewers(new ArrayList<>(pullRequest.getReviewers()));
+            review.setReviewers(new ArrayList<>(pullRequest.getCodeReviewers()));
 
             allPreviousReviews.add(review);
         }

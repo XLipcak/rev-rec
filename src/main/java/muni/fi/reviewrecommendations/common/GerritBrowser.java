@@ -23,17 +23,26 @@ public class GerritBrowser {
         this.gerritApi = gerritRestApiFactory.create(authData);
     }
 
-    public Collection<AccountInfo> getReviewers(String changeId) throws RestApiException {
+    public Collection<AccountInfo> getReviewers(String changeId, String label) throws RestApiException {
+        ChangeInfo changeInfo = null;
         try {
-            ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
+            changeInfo = getChange(changeId);
+        } catch (HttpStatusException ex) {
+            return new ArrayList<>();
+        }
+        return getReviewers(changeInfo, label);
+    }
+
+    public Collection<AccountInfo> getReviewers(ChangeInfo changeInfo, String label) throws RestApiException {
+        try {
             List<AccountInfo> result = new ArrayList<>();
 
-            LabelInfo labelInfo = changeInfo.labels.get("Code-Review");
-            if(labelInfo.all == null){
+            LabelInfo labelInfo = changeInfo.labels.get(label);
+            if (labelInfo.all == null) {
                 return result;
             }
             for (ApprovalInfo approvalInfo : labelInfo.all) {
-                if (approvalInfo.value!= null && approvalInfo.value > 0) {
+                if (approvalInfo.value != null && approvalInfo.value > 0) {
                     AccountInfo accountInfo = new AccountInfo(approvalInfo._accountId);
                     accountInfo.email = approvalInfo.email;
                     accountInfo.name = approvalInfo.name;
@@ -47,9 +56,19 @@ public class GerritBrowser {
             return new ArrayList<>();
         } catch (IllegalArgumentException ex) {
             return new ArrayList<>();
-        } catch (HttpStatusException ex) {
-            return new ArrayList<>();
         }
+    }
+
+    public Collection<AccountInfo> getCommentators(ChangeInfo changeInfo) throws RestApiException {
+        List<AccountInfo> result = new ArrayList<>();
+
+        if (changeInfo.messages == null) {
+            return result;
+        }
+        for (ChangeMessageInfo changeMessageInfo : changeInfo.messages) {
+            result.add(changeMessageInfo.author);
+        }
+        return result;
     }
 
     public int getChangeNumber(String changeId) throws RestApiException {

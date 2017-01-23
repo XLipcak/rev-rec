@@ -20,14 +20,40 @@ public class PullRequest {
     private Integer changeNumber;
     private Long time;
 
+    private Integer insertions;
+    private Integer deletions;
+
     @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> reviewers;
+    private Set<Reviewer> codeReviewers;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Reviewer> autoSubmitReviewers;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Reviewer> preSubmitReadyReviewers;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Reviewer> preSubmitVerifiedReviewers;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Reviewer> verifiedReviewers;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Reviewer> allReviewers;
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Reviewer> allCommentators;
 
     @OneToMany(mappedBy = "pullRequest", fetch = FetchType.EAGER)
     private Set<FilePath> filePaths;
 
     @OneToOne(fetch = FetchType.EAGER)
     private Project project;
+
+    @OneToOne(fetch = FetchType.EAGER)
+    private Reviewer owner;
+
+    private String subProject;
 
     public PullRequest() {
     }
@@ -56,14 +82,6 @@ public class PullRequest {
         this.time = time;
     }
 
-    public Set<Reviewer> getReviewers() {
-        return reviewers;
-    }
-
-    public void setReviewers(Set<Reviewer> reviewers) {
-        this.reviewers = reviewers;
-    }
-
     public Set<FilePath> getFilePaths() {
         return filePaths;
     }
@@ -86,5 +104,93 @@ public class PullRequest {
 
     public void setChangeNumber(Integer changeNumber) {
         this.changeNumber = changeNumber;
+    }
+
+    public String getSubProject() {
+        return subProject;
+    }
+
+    public void setSubProject(String subProject) {
+        this.subProject = subProject;
+    }
+
+    public Reviewer getOwner() {
+        return owner;
+    }
+
+    public void setOwner(Reviewer owner) {
+        this.owner = owner;
+    }
+
+    public Set<Reviewer> getCodeReviewers() {
+        return codeReviewers;
+    }
+
+    public void setCodeReviewers(Set<Reviewer> codeReviewers) {
+        this.codeReviewers = codeReviewers;
+    }
+
+    public Set<Reviewer> getAutoSubmitReviewers() {
+        return autoSubmitReviewers;
+    }
+
+    public void setAutoSubmitReviewers(Set<Reviewer> autoSubmitReviewers) {
+        this.autoSubmitReviewers = autoSubmitReviewers;
+    }
+
+    public Set<Reviewer> getPreSubmitReadyReviewers() {
+        return preSubmitReadyReviewers;
+    }
+
+    public void setPreSubmitReadyReviewers(Set<Reviewer> preSubmitReadyReviewers) {
+        this.preSubmitReadyReviewers = preSubmitReadyReviewers;
+    }
+
+    public Set<Reviewer> getPreSubmitVerifiedReviewers() {
+        return preSubmitVerifiedReviewers;
+    }
+
+    public void setPreSubmitVerifiedReviewers(Set<Reviewer> preSubmitVerifiedReviewers) {
+        this.preSubmitVerifiedReviewers = preSubmitVerifiedReviewers;
+    }
+
+    public Set<Reviewer> getVerifiedReviewers() {
+        return verifiedReviewers;
+    }
+
+    public void setVerifiedReviewers(Set<Reviewer> verifiedReviewers) {
+        this.verifiedReviewers = verifiedReviewers;
+    }
+
+    public Integer getInsertions() {
+        return insertions;
+    }
+
+    public void setInsertions(Integer insertions) {
+        this.insertions = insertions;
+    }
+
+    public Integer getDeletions() {
+        return deletions;
+    }
+
+    public void setDeletions(Integer deletions) {
+        this.deletions = deletions;
+    }
+
+    public Set<Reviewer> getAllReviewers() {
+        return allReviewers;
+    }
+
+    public void setAllReviewers(Set<Reviewer> allReviewers) {
+        this.allReviewers = allReviewers;
+    }
+
+    public Set<Reviewer> getAllCommentators() {
+        return allCommentators;
+    }
+
+    public void setAllCommentators(Set<Reviewer> allCommentators) {
+        this.allCommentators = allCommentators;
     }
 }
