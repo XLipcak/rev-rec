@@ -1,4 +1,4 @@
-package muni.fi.reviewrecommendations.recommendationTechniques.revfinder;
+package muni.fi.reviewrecommendations.recommendationTechniques;
 
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 

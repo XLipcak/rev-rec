@@ -1,6 +1,7 @@
 package muni.fi.reviewrecommendations.recommendationTechniques.revfinder;
 
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
 
 import java.util.*;

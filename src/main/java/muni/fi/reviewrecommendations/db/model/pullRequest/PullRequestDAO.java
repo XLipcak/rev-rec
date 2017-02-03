@@ -1,5 +1,6 @@
 package muni.fi.reviewrecommendations.db.model.pullRequest;
 
+import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 import org.springframework.data.repository.CrudRepository;
 
 import javax.transaction.Transactional;
@@ -10,9 +11,10 @@ import java.util.List;
  */
 @Transactional
 public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
-    //findByTimeLessThan
-    List<PullRequest> findByTimeLessThan(Long time);
-    List<PullRequest> findByTimeLessThanAndTimeGreaterThan(Long time1, Long time2);
-    List<PullRequest> findByChangeId(String changeId);
+
+    List<PullRequest> findByTimeLessThanAndProjectName(Long time, String name);
+    List<PullRequest> findByChangeIdAndProjectName(String changeId, String name);
     List<PullRequest> findByChangeNumber(Integer changeNumber);
+    List<PullRequest> findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(Reviewer reviewer, Long time1, Long time2, String name);
+    List<PullRequest> findByProjectName(String name);
 }

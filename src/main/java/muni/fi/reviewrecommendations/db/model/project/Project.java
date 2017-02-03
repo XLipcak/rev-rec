@@ -9,20 +9,20 @@ import javax.persistence.Id;
 @Entity
 public class Project {
     @Id
-    private String projectName;
+    private String name;
 
     public Project() {
     }
 
-    public Project(String projectName) {
-        this.projectName = projectName;
+    public Project(String name) {
+        this.name = name;
     }
 
-    public String getProjectName() {
-        return projectName;
+    public String getName() {
+        return name;
     }
 
-    public void setProjectName(String projectName) {
-        this.projectName = projectName;
+    public void setName(String projectName) {
+        this.name = projectName;
     }
 }

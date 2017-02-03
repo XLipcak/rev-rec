@@ -6,7 +6,7 @@ import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.common.GitBrowser;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
-import muni.fi.reviewrecommendations.recommendationTechniques.revfinder.Review;
+import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.lib.ObjectId;

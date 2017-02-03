@@ -27,15 +27,6 @@ public class PullRequest {
     private Set<Reviewer> codeReviewers;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> autoSubmitReviewers;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> preSubmitReadyReviewers;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> preSubmitVerifiedReviewers;
-
-    @ManyToMany(fetch = FetchType.EAGER)
     private Set<Reviewer> verifiedReviewers;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -43,6 +34,10 @@ public class PullRequest {
 
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Reviewer> allCommentators;
+
+    //subset of allCodeReviewers
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Reviewer> allSpecificCodeReviewers;
 
     @OneToMany(mappedBy = "pullRequest", fetch = FetchType.EAGER)
     private Set<FilePath> filePaths;
@@ -130,30 +125,6 @@ public class PullRequest {
         this.codeReviewers = codeReviewers;
     }
 
-    public Set<Reviewer> getAutoSubmitReviewers() {
-        return autoSubmitReviewers;
-    }
-
-    public void setAutoSubmitReviewers(Set<Reviewer> autoSubmitReviewers) {
-        this.autoSubmitReviewers = autoSubmitReviewers;
-    }
-
-    public Set<Reviewer> getPreSubmitReadyReviewers() {
-        return preSubmitReadyReviewers;
-    }
-
-    public void setPreSubmitReadyReviewers(Set<Reviewer> preSubmitReadyReviewers) {
-        this.preSubmitReadyReviewers = preSubmitReadyReviewers;
-    }
-
-    public Set<Reviewer> getPreSubmitVerifiedReviewers() {
-        return preSubmitVerifiedReviewers;
-    }
-
-    public void setPreSubmitVerifiedReviewers(Set<Reviewer> preSubmitVerifiedReviewers) {
-        this.preSubmitVerifiedReviewers = preSubmitVerifiedReviewers;
-    }
-
     public Set<Reviewer> getVerifiedReviewers() {
         return verifiedReviewers;
     }
@@ -192,5 +163,13 @@ public class PullRequest {
 
     public void setAllCommentators(Set<Reviewer> allCommentators) {
         this.allCommentators = allCommentators;
+    }
+
+    public Set<Reviewer> getAllSpecificCodeReviewers() {
+        return allSpecificCodeReviewers;
+    }
+
+    public void setAllSpecificCodeReviewers(Set<Reviewer> allSpecificCodeReviewers) {
+        this.allSpecificCodeReviewers = allSpecificCodeReviewers;
     }
 }
