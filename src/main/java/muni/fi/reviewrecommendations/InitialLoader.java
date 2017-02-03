@@ -44,7 +44,7 @@ public class InitialLoader implements CommandLineRunner {
 
         //dataLoader.loadDataByChangeIdsFromFile("android.json", gerritBrowser, "Android");
 
-        testTechnique(100, projectName);
+        //testTechnique(100, projectName);
     }
 
     private void testTechnique(int iterations, String projectName) throws IOException, RestApiException {
@@ -61,7 +61,8 @@ public class InitialLoader implements CommandLineRunner {
             if (iterationsCounter > iterations) {
                 break;
             }
-            RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(pullRequest.getChangeId(), projectName));
+
+            RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName));
             Review review = new Review();
             List<String> paths = new ArrayList<>();
             for (FilePath filePath : pullRequest.getFilePaths()) {
@@ -69,9 +70,9 @@ public class InitialLoader implements CommandLineRunner {
             }
             review.setFilePaths(paths);
 
-            //List<Reviewer> reviewers = recommend(revFinder, review);
-            List<Reviewer> reviewers = removeSelfReviewers(removeRetiredReviewers(pullRequest, 31104000000l, reviewerRecommendationService.recommend(revFinder, review), projectName),
-                    pullRequest, findSelfReviewers(projectName)); //12 months
+            List<Reviewer> reviewers = reviewerRecommendationService.recommend(revFinder, review);
+            /*List<Reviewer> reviewers = removeSelfReviewers(removeRetiredReviewers(pullRequest, 31104000000l, reviewerRecommendationService.recommend(revFinder, review), projectName),
+                    pullRequest, findSelfReviewers(projectName)); //12 months*/
 
             for (int x = 0; x < 1 && x < reviewers.size(); x++) {
                 if (pullRequest.getAllSpecificCodeReviewers().contains(reviewers.get(x))) {

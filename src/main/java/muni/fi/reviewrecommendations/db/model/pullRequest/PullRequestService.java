@@ -39,13 +39,12 @@ public class PullRequestService {
         return pullRequestDAO.findByProjectName(name);
     }
 
-    public List<Review> getAllPreviousReviews(String changeId, String projectName) {
+    public List<Review> getAllPreviousReviews(Long changeTime, String projectName) {
 
         List<Review> allPreviousReviews = new ArrayList<>();
         //Set<Reviewer> reviewersWithAtLeastOneReview = new HashSet<>();
 
-        PullRequest request = pullRequestDAO.findByChangeIdAndProjectName(changeId, projectName).get(0);
-        Set<PullRequest> pullRequests = new HashSet<>(Lists.newArrayList(pullRequestDAO.findByTimeLessThanAndProjectName(request.getTime(), projectName)));
+        Set<PullRequest> pullRequests = new HashSet<>(Lists.newArrayList(pullRequestDAO.findByTimeLessThanAndProjectName(changeTime, projectName)));
 
         /*for (PullRequest pullRequest : pullRequests) {
             for (Reviewer reviewer : pullRequest.getCodeReviewers()) {

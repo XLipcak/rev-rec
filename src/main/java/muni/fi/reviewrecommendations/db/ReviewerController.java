@@ -3,13 +3,11 @@ package muni.fi.reviewrecommendations.db;
 import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.reviewrecommendations.common.GerritBrowser;
-import muni.fi.reviewrecommendations.common.GitBrowser;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestService;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendationService;
 import muni.fi.reviewrecommendations.recommendationTechniques.revfinder.RevFinder;
-import muni.fi.reviewrecommendations.recommendationTechniques.reviewbot.ReviewBot;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -35,7 +33,7 @@ public class ReviewerController {
     @RequestMapping(value = "/reviewer", method = RequestMethod.GET)
     List<Reviewer> all(@RequestParam(value = "gerritChangeNumber", required = true) String gerritChangeNumber) throws IOException, RestApiException {
         GerritBrowser gerritBrowser = new GerritBrowser("https://android-review.googlesource.com");
-        GitBrowser gitBrowser = new GitBrowser("sdk", false);
+        //GitBrowser gitBrowser = new GitBrowser("sdk", false);
         String projectName = "Android";
 
         //String changeId = pullRequestDAO.findByChangeNumber(new Integer(gerritChangeNumber)).get(0).getChangeId();
@@ -43,8 +41,8 @@ public class ReviewerController {
         review.setFilePaths(gerritBrowser.getFilePaths(gerritChangeNumber));
 
         ChangeInfo changeInfo = gerritBrowser.getChange(gerritChangeNumber);
-        RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(changeInfo.changeId, projectName));
-        ReviewBot reviewBot = new ReviewBot(gitBrowser, gerritBrowser);
+        RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(changeInfo.created.getTime(), projectName));
+        //ReviewBot reviewBot = new ReviewBot(gitBrowser, gerritBrowser);
 
         return reviewerRecommendationService.recommend(revFinder, review);
     }
