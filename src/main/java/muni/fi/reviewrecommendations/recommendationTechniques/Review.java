@@ -2,7 +2,6 @@ package muni.fi.reviewrecommendations.recommendationTechniques;
 
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -12,7 +11,11 @@ public class Review {
 
     private List<String> filePaths;
     private List<Reviewer> reviewers;
-    private Date date;
+    private Long time;
+    private Reviewer owner;
+    private int insertions;
+    private int deletions;
+    private String subProject;
 
     public Review() {
     }
@@ -33,12 +36,43 @@ public class Review {
         this.reviewers = reviewers;
     }
 
-    public Date getDate() {
-        return date;
+    public Long getTime() {
+        return time;
     }
 
-    public void setDate(Date date) {
-        this.date = date;
+    public void setTime(Long time) {
+        this.time = time;
     }
 
+    public Reviewer getOwner() {
+        return owner;
+    }
+
+    public void setOwner(Reviewer owner) {
+        this.owner = owner;
+    }
+
+    public int getInsertions() {
+        return insertions;
+    }
+
+    public void setInsertions(int insertions) {
+        this.insertions = insertions;
+    }
+
+    public int getDeletions() {
+        return deletions;
+    }
+
+    public void setDeletions(int deletions) {
+        this.deletions = deletions;
+    }
+
+    public String getSubProject() {
+        return subProject;
+    }
+
+    public void setSubProject(String subProject) {
+        this.subProject = subProject;
+    }
 }

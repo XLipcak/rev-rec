@@ -22,7 +22,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
+        <jayes.version>2.5.0-SNAPSHOT</jayes.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>recommenders</id>
+            <url>https://repo.eclipse.org/content/repositories/recommenders/</url>
+        </repository>
+    </repositories>
 
     <dependencies>
         <dependency>
@@ -69,6 +77,43 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20160810</version>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.eclipse.recommenders</groupId>
+            <artifactId>org.eclipse.recommenders.jayes</artifactId>
+            <version>${jayes.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.recommenders</groupId>
+            <artifactId>org.eclipse.recommenders.jayes.io</artifactId>
+            <version>${jayes.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.recommenders</groupId>
+            <artifactId>org.eclipse.recommenders.jayes.transformation</artifactId>
+            <version>${jayes.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>15.0</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math</artifactId>
+            <version>2.1</version>
         </dependency>
 
     </dependencies>

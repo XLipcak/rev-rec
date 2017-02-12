@@ -54,7 +54,7 @@ public class PullRequestService {
 
         for (PullRequest pullRequest : pullRequests) {
             Review review = new Review();
-            review.setDate(new Date(pullRequest.getTime() * 1000));
+            review.setTime(pullRequest.getTime() * 1000);
 
             List<String> filePaths = new ArrayList<>();
             for (FilePath filePath : pullRequest.getFilePaths()) {
@@ -62,6 +62,11 @@ public class PullRequestService {
                 filePaths.add(filePath.getFilePath());
             }
             review.setFilePaths(filePaths);
+            review.setTime(pullRequest.getTime());
+            review.setInsertions(pullRequest.getInsertions());
+            review.setDeletions(pullRequest.getDeletions());
+            review.setSubProject(pullRequest.getSubProject());
+            review.setOwner(pullRequest.getOwner());
 
             review.setReviewers(new ArrayList<>(pullRequest.getAllSpecificCodeReviewers()));
             //review.setReviewers(new ArrayList<>(mergeReviewers(pullRequest, reviewersWithAtLeastOneReview)));
