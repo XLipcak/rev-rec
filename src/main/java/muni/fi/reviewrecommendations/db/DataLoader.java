@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.google.gerrit.extensions.common.AccountInfo;
 import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
+import com.urswolfer.gerrit.client.rest.http.HttpStatusException;
 import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.common.GitBrowser;
 import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
@@ -51,9 +52,9 @@ public class DataLoader {
     /**
      * Extract data from JSON file and store them in the database. Only information about reviewers is fetched from Gerrit.
      *
-     * @param fileLocation location of JSON file
+     * @param fileLocation  location of JSON file
      * @param gerritBrowser instance of Gerrit browser for chosen project
-     * @param projectName name of the project
+     * @param projectName   name of the project
      * @throws RestApiException
      * @throws ParseException
      */
@@ -89,10 +90,9 @@ public class DataLoader {
                     pullRequest.setChangeId(Integer.toString((Integer) obj.get("changeId")));
                     pullRequest.setTime(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse((String) obj.get("submit_date")).getTime());
 
-                    pullRequest.setCodeReviewers(reviewers);
-
+                    pullRequest.setAllSpecificCodeReviewers(reviewers);
+                    pullRequest.setSubProject(obj.getString("project"));
                     pullRequest.setProject(project);
-                    //pullRequest.setChangeNumber(gerritBrowser.getChangeNumber(Integer.toString((Integer) obj.get("changeId"))));
                     pullRequest = pullRequestDAO.save(pullRequest);
 
 
@@ -115,9 +115,9 @@ public class DataLoader {
     /**
      * Extract change IDs from JSON file and fetch all information about these change requests from Gerrit.
      *
-     * @param fileLocation location of JSON file
+     * @param fileLocation  location of JSON file
      * @param gerritBrowser instance of Gerrit browser for chosen project
-     * @param projectName name of the project
+     * @param projectName   name of the project
      * @throws RestApiException
      * @throws ParseException
      */
@@ -136,12 +136,22 @@ public class DataLoader {
                 if (line == null) {
                     return;
                 } else {
-                    if (x > 4754) {
-                        System.out.println(x);
-                        JSONObject obj = new JSONObject(line);
-                        String changeId = Integer.toString((Integer) obj.get("changeId"));
-                        ChangeInfo changeInfo = gerritBrowser.getChange(changeId);
-                        saveChangeRequest(changeInfo, projectName, gerritBrowser, getSetOfReviewersFromJsonObject(obj, gerritBrowser));
+                    if (x >= 0) {
+                        try {
+                            System.out.println(x);
+                            JSONObject obj = new JSONObject(line);
+                            String changeId = Integer.toString((Integer) obj.get("changeId"));
+                            ChangeInfo changeInfo = gerritBrowser.getChange(changeId);
+                            List<String> paths = new ArrayList<>();
+                            JSONArray arr = ((JSONArray) obj.get("files"));
+                            for (int i = 0; i < arr.length(); i++) {
+                                paths.add(arr.getString(i));
+                            }
+
+                            saveChangeRequest(changeInfo, projectName, gerritBrowser, getSetOfReviewersFromJsonObject(obj, gerritBrowser), paths);
+                        } catch (HttpStatusException | IndexOutOfBoundsException ex) {
+                            System.out.println(ex);
+                        }
                     }
                 }
             }
@@ -156,8 +166,8 @@ public class DataLoader {
      * Extract all previous pull requests from the information in GIT repository and store them in the database,
      *
      * @param gerritBrowser instance of Gerrit browser for chosen project
-     * @param gitBrowser instance of Git browser for chosen project
-     * @param projectName name of the project
+     * @param gitBrowser    instance of Git browser for chosen project
+     * @param projectName   name of the project
      * @throws GitAPIException
      */
     public void loadDataFromGit(GerritBrowser gerritBrowser, GitBrowser gitBrowser, String projectName) throws GitAPIException {
@@ -192,10 +202,10 @@ public class DataLoader {
     }
 
     private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser) throws RestApiException {
-        saveChangeRequest(changeInfo, projectName, gerritBrowser, new HashSet<>());
+        saveChangeRequest(changeInfo, projectName, gerritBrowser, new HashSet<>(), new ArrayList<>());
     }
 
-    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser, Set<Reviewer> specificCodeReviewers) throws RestApiException {
+    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser, Set<Reviewer> specificCodeReviewers, List<String> paths) throws RestApiException {
         Project project = new Project();
         if (projectDAO.findOne(projectName) != null) {
             project = projectDAO.findOne(projectName);
@@ -204,19 +214,22 @@ public class DataLoader {
             project = projectDAO.save(project);
         }
 
-        if (changeInfo.reviewers == null) {
+        /*if (changeInfo.reviewers == null) {
             System.out.println("NULL");
             return;
-        }
+        }*/
 
         Set<Reviewer> allReviewers = new HashSet<>();
-        for (AccountInfo accountInfo : changeInfo.reviewers.values().iterator().next()) {
-            Reviewer reviewer = reviewerDAO.findOne(accountInfo._accountId);
-            if (reviewer == null) {
-                reviewer = new Reviewer(accountInfo);
-                reviewerDAO.save(reviewer);
+        if (changeInfo.reviewers != null) {
+            allReviewers = new HashSet<>();
+            for (AccountInfo accountInfo : changeInfo.reviewers.values().iterator().next()) {
+                Reviewer reviewer = reviewerDAO.findOne(accountInfo._accountId);
+                if (reviewer == null) {
+                    reviewer = new Reviewer(accountInfo);
+                    reviewerDAO.save(reviewer);
+                }
+                allReviewers.add(reviewer);
             }
-            allReviewers.add(reviewer);
         }
 
         Reviewer owner = reviewerDAO.findOne(changeInfo.owner._accountId);
@@ -235,15 +248,15 @@ public class DataLoader {
         pullRequest.setInsertions(changeInfo.insertions);
         pullRequest.setDeletions(changeInfo.deletions);
 
-        pullRequest.setCodeReviewers(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getReviewers(changeInfo, "Code-Review")));
+        /*pullRequest.setCodeReviewers(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getReviewers(changeInfo, "Code-Review")));
         pullRequest.setVerifiedReviewers(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getReviewers(changeInfo, "Verified")));
         pullRequest.setAllReviewers(allReviewers);
-        pullRequest.setAllCommentators(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getCommentators(changeInfo)));
+        pullRequest.setAllCommentators(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getCommentators(changeInfo)));*/
         pullRequest.setAllSpecificCodeReviewers(specificCodeReviewers);
 
         pullRequest = pullRequestDAO.save(pullRequest);
 
-        List<String> paths = gerritBrowser.getFilePaths(changeInfo.changeId);
+        //List<String> paths = gerritBrowser.getFilePaths(changeInfo.changeId);
         for (String path : paths) {
             FilePath filePath = new FilePath(path, pullRequest);
             filePathDAO.save(filePath);
@@ -264,7 +277,7 @@ public class DataLoader {
                 newReviewer.setId(accountInfo._accountId);
                 newReviewer.setEmail(accountInfo.email);
                 newReviewer.setName(accountInfo.name);
-                if (accountInfo.avatars.size() > 0) {
+                if (accountInfo.avatars != null && accountInfo.avatars.size() > 0) {
                     newReviewer.setAvatar(accountInfo.avatars.get(0).url);
                 }
                 reviewer = reviewerDAO.save(newReviewer);

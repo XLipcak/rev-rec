@@ -2,6 +2,7 @@ package muni.fi.reviewrecommendations.common;
 
 import com.google.gerrit.extensions.api.GerritApi;
 import com.google.gerrit.extensions.api.changes.Changes;
+import com.google.gerrit.extensions.client.ListChangesOption;
 import com.google.gerrit.extensions.common.*;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import com.urswolfer.gerrit.client.rest.GerritAuthData;
@@ -101,7 +102,9 @@ public class GerritBrowser {
     }
 
     public ChangeInfo getChange(String changeId) throws RestApiException {
-        ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
+        //dependent on Gerrit instance
+        //ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
+        ChangeInfo changeInfo = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS).get().get(0);
         return changeInfo;
     }
 

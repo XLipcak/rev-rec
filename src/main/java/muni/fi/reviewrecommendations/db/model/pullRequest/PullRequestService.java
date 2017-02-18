@@ -22,6 +22,9 @@ public class PullRequestService {
         return pullRequestDAO.findByTimeLessThanAndProjectName(time, name);
     }
 
+    public List<PullRequest> findByProjectNameOrderByTimeDesc(String projectName) {
+        return pullRequestDAO.findByProjectNameOrderByTimeDesc(projectName);
+    }
 
     public List<PullRequest> findByChangeIdAndProjectName(String changeId, String name) {
         return pullRequestDAO.findByChangeIdAndProjectName(changeId, name);

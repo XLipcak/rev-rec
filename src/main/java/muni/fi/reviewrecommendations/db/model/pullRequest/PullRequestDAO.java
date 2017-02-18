@@ -25,7 +25,9 @@ public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
 
     List<PullRequest> findByProjectName(String name);
 
-    List<PullRequest> findByAllSpecificCodeReviewersAndProjectName(Reviewer reviewer, String project);
+    List<PullRequest> findByProjectNameOrderByTimeDesc(String name);
+
+    List<PullRequest> findByAllSpecificCodeReviewersAndProjectNameAndTimeLessThan(Reviewer reviewer, String project, Long time1);
 
     Set<PullRequest> findByProjectNameAndFilePathsFilePathAndTimeLessThan(String name, String filePath, Long time1);
 

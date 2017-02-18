@@ -1,10 +1,10 @@
 package muni.fi.reviewrecommendations.recommendationTechniques.bayes;
 
 import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
+import muni.fi.reviewrecommendations.db.model.filePath.FilePathDAO;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestDAO;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
-import muni.fi.reviewrecommendations.db.model.reviewer.ReviewerDAO;
 import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
 import org.eclipse.recommenders.jayes.BayesNet;
@@ -12,18 +12,15 @@ import org.eclipse.recommenders.jayes.BayesNode;
 import org.eclipse.recommenders.jayes.inference.IBayesInferer;
 import org.eclipse.recommenders.jayes.inference.jtree.JunctionTreeAlgorithm;
 import org.eclipse.recommenders.jayes.util.NumericalInstabilityException;
-import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Created by Kubo on 5.2.2017.
+ * @author Jakub Lipcak, Masaryk University
  */
 @Service
 public class Bayes implements ReviewerRecommendation {
@@ -34,7 +31,7 @@ public class Bayes implements ReviewerRecommendation {
     private PullRequestDAO pullRequestDAO;
 
     @Autowired
-    private ReviewerDAO reviewerDAO;
+    private FilePathDAO filePathDAO;
 
     @Value("${recommendation.project}")
     private String project;
@@ -43,11 +40,11 @@ public class Bayes implements ReviewerRecommendation {
     private IBayesInferer inferer;
     private BayesNode reviewersNode;
     private BayesNode subProjectNode;
-    private BayesNode fileEndingNode;
+    private BayesNode filePathNode;
     private BayesNode ownerNode;
 
     private List<Reviewer> allReviewers;
-    List<String> allFileEndings;
+    List<String> allFilePaths;
     List<Reviewer> allOwners;
     List<String> allSubProjects;
 
@@ -55,7 +52,7 @@ public class Bayes implements ReviewerRecommendation {
     }
 
     public void buildNetwork(Long timeStamp) {
-        allFileEndings = findAllFileEndings(timeStamp);
+        allFilePaths = findAllFilePaths(timeStamp);
         allOwners = findAllOwners(timeStamp);
         allReviewers = findAllCodeReviewers(timeStamp);
         allSubProjects = findAllSubProjects(timeStamp);
@@ -73,14 +70,14 @@ public class Bayes implements ReviewerRecommendation {
         index = 0;
         for (Reviewer reviewer : allReviewers) {
             reviewersOutcomes[index] = reviewer.getId().toString();
-            reviewersProbabilities[index] = ((double) (pullRequestDAO.findByAllSpecificCodeReviewersAndProjectName(reviewer, project).size()) / allReviewersSize);
+            reviewersProbabilities[index] = ((double) (pullRequestDAO.findByAllSpecificCodeReviewersAndProjectNameAndTimeLessThan(reviewer, project, timeStamp).size()) / allReviewersSize);
             index++;
             //System.out.println(index);
         }
         reviewersNode.addOutcomes(reviewersOutcomes);
         reviewersNode.setProbabilities(reviewersProbabilities);
 
-        //Project node
+        //Subproject node
         subProjectNode = net.createNode("subProjectNode");
         String subProjectOutcomes[] = new String[allSubProjects.size()];
         double[] subProjectProbabilities = new double[allReviewers.size() * allSubProjects.size()];
@@ -98,7 +95,6 @@ public class Bayes implements ReviewerRecommendation {
                 subProjectProbabilities[index] = ((double) pullRequestDAO.findByProjectNameAndSubProjectAndAllSpecificCodeReviewersAndTimeLessThan(project, subProject, reviewer, timeStamp).size() /
                         denumeratorSize);
                 index++;
-                //System.out.println(index);
             }
             subProjectProbabilities = normaliseArray(index - subProjectsArray.length, index, subProjectProbabilities);
         }
@@ -108,21 +104,25 @@ public class Bayes implements ReviewerRecommendation {
         subProjectNode.setProbabilities(subProjectProbabilities);
 
 
-        //File ending node
-        fileEndingNode = net.createNode("fileEndingNode");
-        String[] fileEndingNodeOutcomes = allFileEndings.toArray(new String[allFileEndings.size()]);
-        double[] fileEndingNodeProbabilities = new double[allReviewers.size() * allFileEndings.size()];
+        //File path node
+        filePathNode = net.createNode("filePathNode");
+        String[] filePathNodeOutcomes = allFilePaths.toArray(new String[allFilePaths.size()]);
+        double[] filePathNodeProbabilities = new double[allReviewers.size() * allFilePaths.size()];
         index = 0;
         for (Reviewer reviewer : allReviewers) {
-            for (String fileEnding : fileEndingNodeOutcomes) {
-                fileEndingNodeProbabilities[index] = getFileEndingProbabilityForReviewer(fileEnding, reviewer, timeStamp); //1d / fileEndingNodeOutcomes.length; //
+            double denumeratorSize = (double) filePathDAO.findByPullRequestProjectNameAndPullRequestAllSpecificCodeReviewersAndPullRequestTimeLessThan(project, reviewer, timeStamp).size();
+            for (String filePath : filePathNodeOutcomes) {
+                filePathNodeProbabilities[index] = //1d / filePathNodeOutcomes.length;
+                        filePathDAO.findByPullRequestProjectNameAndFilePathAndPullRequestAllSpecificCodeReviewersAndPullRequestTimeLessThan(project,
+                                filePath, reviewer, timeStamp).size() / denumeratorSize;
                 index++;
+                System.out.println(index + "/" + filePathNodeProbabilities.length);
             }
-            fileEndingNodeProbabilities = normaliseArray(index - fileEndingNodeOutcomes.length, index, fileEndingNodeProbabilities);
+            filePathNodeProbabilities = normaliseArray(index - filePathNodeOutcomes.length, index, filePathNodeProbabilities);
         }
-        fileEndingNode.addOutcomes(fileEndingNodeOutcomes);
-        fileEndingNode.setParents(Arrays.asList(reviewersNode));
-        fileEndingNode.setProbabilities(fileEndingNodeProbabilities);
+        filePathNode.addOutcomes(filePathNodeOutcomes);
+        filePathNode.setParents(Arrays.asList(reviewersNode));
+        filePathNode.setProbabilities(filePathNodeProbabilities);
 
 
         //Owner node
@@ -157,6 +157,24 @@ public class Bayes implements ReviewerRecommendation {
     @Override
     public Map<Reviewer, Double> reviewersRankingAlgorithm(Review review) {
         Map<Reviewer, Double> result = new HashMap<>();
+        for (String x : review.getFilePaths()) {
+            Map<Reviewer, Double> resultList = recommend(review, x);
+            resultList = sortByValue(resultList);
+            double y = resultList.size();
+            for (Map.Entry<Reviewer, Double> entry : resultList.entrySet()) {
+                if (result.containsKey(entry.getKey())) {
+                    result.replace(entry.getKey(), result.get(entry.getKey()) + y);
+                } else {
+                    result.put(entry.getKey(), y);
+                }
+                y--;
+            }
+        }
+        return result;
+    }
+
+    private Map<Reviewer, Double> recommend(Review review, String fileEnding) {
+        Map<Reviewer, Double> result = new HashMap<>();
 
         Map<BayesNode, String> evidence = new HashMap<BayesNode, String>();
 
@@ -167,11 +185,11 @@ public class Bayes implements ReviewerRecommendation {
             evidence.put(subProjectNode, "otherSubProject");
         }
 
-        if (new HashSet<>(allFileEndings).contains(getReviewEnding(review))) {
-            evidence.put(fileEndingNode, getReviewEnding(review));
+        if (new HashSet<>(allFilePaths).contains(fileEnding)) {
+            evidence.put(filePathNode, fileEnding);
         } else {
-            System.out.println("Bayes otherEnding");
-            evidence.put(fileEndingNode, "otherEnding");
+            System.out.println("Bayes otherFilePath");
+            evidence.put(filePathNode, "otherFilePath");
         }
 
 
@@ -195,8 +213,6 @@ public class Bayes implements ReviewerRecommendation {
             System.out.println(ex.getMessage());
             return result;
         }
-
-
     }
 
 
@@ -237,18 +253,6 @@ public class Bayes implements ReviewerRecommendation {
         return new ArrayList<>(allSubProjects);
     }
 
-    private void saveArrayToJsonFile(double[] probabilityArray, String fileName) {
-        JSONArray mJSONArray = new JSONArray(Arrays.asList(probabilityArray));
-
-        try {
-            PrintWriter writer = new PrintWriter(fileName, "UTF-8");
-            writer.println(mJSONArray.toString());
-            writer.close();
-        } catch (IOException e) {
-            // TODO: do something
-        }
-    }
-
     private double[] normaliseArray(int beginIndex, int endIndex, double[] array) {
         int nonZeroElements = 0;
         int zeroElements = 0;
@@ -259,7 +263,6 @@ public class Bayes implements ReviewerRecommendation {
                 zeroElements++;
             }
         }
-
         for (int x = beginIndex; x < endIndex; x++) {
             if (array[x] > 0) {
                 array[x] = array[x] - (MINIMAL_PERCENTAGE_VALUE / nonZeroElements);
@@ -271,55 +274,18 @@ public class Bayes implements ReviewerRecommendation {
         return array;
     }
 
-    private List<String> findAllFileEndings(long timeStamp) {
-        Set<String> allFileEndings = new HashSet<>();
+    private List<String> findAllFilePaths(long timeStamp) {
+        Set<String> allFilePaths = new HashSet<>();
         for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimeLessThan(project, timeStamp)) {
             for (FilePath filePath : pullRequest.getFilePaths()) {
-                allFileEndings.add(getFileEndingFromFilePath(filePath.getFilePath()));
+                allFilePaths.add(filePath.getFilePath());
             }
         }
-        allFileEndings.add("otherEnding");
+        allFilePaths.add("otherFilePath");
 
-        return new ArrayList<>(allFileEndings);
+        return new ArrayList<>(allFilePaths);
     }
 
-    private String getFileEndingFromFilePath(String filePath) {
-        String[] pathArray = filePath.split("\\.");
-        String fileEnding = pathArray[pathArray.length - 1];
-        pathArray = fileEnding.split("/");
-        fileEnding = pathArray[pathArray.length - 1];
-
-        return fileEnding;
-    }
-
-    private double getFileEndingProbabilityForReviewer(String fileEnding, Reviewer reviewer, long timeStamp) {
-        double counter = 0;
-        double allFiles = 0;
-        for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndAllSpecificCodeReviewersAndTimeLessThan(project, reviewer, timeStamp)) {
-            for (FilePath filePath : pullRequest.getFilePaths()) {
-                allFiles++;
-                if (filePath.getFilePath().contains("." + fileEnding)) {
-                    counter++;
-                }
-            }
-        }
-        return counter / allFiles;
-    }
-
-    private String getReviewEnding(Review review) {
-        Map<String, Integer> map = new HashMap<>();
-        for (String path : review.getFilePaths()) {
-            String fileEnding = getFileEndingFromFilePath(path);
-            if (map.containsKey(fileEnding)) {
-                map.replace(fileEnding, map.get(fileEnding) + 1);
-            } else {
-                map.put(fileEnding, 1);
-            }
-        }
-
-        map = sortByValue(map);
-        return map.entrySet().iterator().next().getKey();
-    }
 
     private <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
         return map.entrySet()

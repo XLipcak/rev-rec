@@ -24,7 +24,7 @@ public class Reviewer {
         this.id = accountInfo._accountId;
         this.email = accountInfo.email;
         this.name = accountInfo.name;
-        if (accountInfo.avatars.size() > 0) {
+        if (accountInfo.avatars != null && accountInfo.avatars.size() > 0) {
             this.avatar = accountInfo.avatars.get(0).url;
         }
     }
