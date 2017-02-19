@@ -5,6 +5,8 @@ import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 import java.util.List;
 
 /**
+ * This class is used to represent the code change waiting for code review, independently of PullRequest class in db model.
+ *
  * @author Jakub Lipcak, Masaryk University
  */
 public class Review {

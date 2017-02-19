@@ -18,7 +18,9 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Created by Kubo on 9.1.2017.
+ * REST interface of the system.
+ *
+ * @author Jakub Lipcak, Masaryk University
  */
 @RestController
 @RequestMapping(path = "/api")

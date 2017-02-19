@@ -11,7 +11,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Created by Kubo on 3.2.2017.
+ * ReviewerRecommendationService
+ *
+ * @author Jakub Lipcak, Masaryk University
  */
 
 @Service

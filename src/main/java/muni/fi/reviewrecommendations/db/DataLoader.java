@@ -33,6 +33,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
+ * This class is used to load data from different sources and stores them in the database.
+ *
  * @author Jakub Lipcak, Masaryk University
  */
 @Service

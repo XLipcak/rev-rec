@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * This class provides data from local GIT repositories.
+ *
  * @author Jakub Lipcak, Masaryk University
  */
 public class GitBrowser {

@@ -20,6 +20,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * Implementation of reviewer recommendation with the usage of Naive Bayes.
+ *
  * @author Jakub Lipcak, Masaryk University
  */
 @Service

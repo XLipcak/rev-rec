@@ -12,6 +12,8 @@ import com.urswolfer.gerrit.client.rest.http.HttpStatusException;
 import java.util.*;
 
 /**
+ * This class implements communication with Gerrit system via REST API.
+ *
  * @author Jakub Lipcak, Masaryk University
  */
 public class GerritBrowser {
