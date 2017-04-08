@@ -7,6 +7,6 @@ This thesis will focus on evaluating several alternatives for the recommendation
 3. Propose new recommendation approach with possible benefits. (04.12.2016 ✔)
 4. Prepare data sources for testing. (31.12.2016 ✔)
 5. Improve the prototype and execute tests on open source software projects providing an experimental evaluation. (29.01.2017 ✔)
-6. Finish all implementation parts of the thesis, improve it as much as possible and implement some GUI (when it would make sense). (28.02.2017) 
+6. Finish all implementation parts of the thesis, improve it as much as possible and implement some GUI (when it would make sense). (28.02.2017 ✔) 
 7. Prepare the outline of written part of the thesis. (12.03.2017 ✔)
 8. Finish the thesis. (14.05.2017)
