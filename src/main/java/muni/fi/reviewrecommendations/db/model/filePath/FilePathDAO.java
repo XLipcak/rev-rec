@@ -11,9 +11,9 @@ import java.util.List;
  */
 @Transactional
 public interface FilePathDAO extends CrudRepository<FilePath, Long> {
-    List<FilePath> findByPullRequestProjectNameAndPullRequestAllSpecificCodeReviewersAndPullRequestTimeLessThan(String projectName,
-                                                                                                                Reviewer reviewer, Long time);
+    List<FilePath> findByPullRequestProjectNameAndPullRequestReviewersAndPullRequestTimeLessThan(String projectName,
+                                                                                                 Reviewer reviewer, Long time);
 
-    List<FilePath> findByPullRequestProjectNameAndFilePathAndPullRequestAllSpecificCodeReviewersAndPullRequestTimeLessThan(String projectName, String filePath,
-                                                                                                                           Reviewer reviewer, Long time);
+    List<FilePath> findByPullRequestProjectNameAndLocationAndPullRequestReviewersAndPullRequestTimeLessThan(String projectName, String location,
+                                                                                                            Reviewer reviewer, Long time);
 }

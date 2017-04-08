@@ -5,9 +5,13 @@ import muni.fi.reviewrecommendations.db.model.project.Project;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 
 import javax.persistence.*;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
+ * This class is used to represent the code change waiting for code review, independently of PullRequest class in db model.
+ *
  * @author Jakub Lipcak, Masaryk University
  */
 @Entity
@@ -15,6 +19,11 @@ public class PullRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
+
+    @OneToOne(fetch = FetchType.EAGER)
+    private Project project;
+
+    private String subProject;
 
     private String changeId;
     private Integer changeNumber;
@@ -24,31 +33,13 @@ public class PullRequest {
     private Integer deletions;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> codeReviewers;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> verifiedReviewers;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> allReviewers;
-
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> allCommentators;
-
-    //subset of allCodeReviewers
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> allSpecificCodeReviewers;
-
-    @OneToMany(mappedBy = "pullRequest", fetch = FetchType.EAGER)
-    private Set<FilePath> filePaths;
-
-    @OneToOne(fetch = FetchType.EAGER)
-    private Project project;
+    private Set<Reviewer> reviewers;
 
     @OneToOne(fetch = FetchType.EAGER)
     private Reviewer owner;
 
-    private String subProject;
+    @OneToMany(mappedBy = "pullRequest", fetch = FetchType.EAGER)
+    private Set<FilePath> filePaths;
 
     public PullRequest() {
     }
@@ -61,44 +52,12 @@ public class PullRequest {
         this.id = id;
     }
 
-    public String getChangeId() {
-        return changeId;
-    }
-
-    public void setChangeId(String changeId) {
-        this.changeId = changeId;
-    }
-
-    public Long getTime() {
-        return time;
-    }
-
-    public void setTime(Long time) {
-        this.time = time;
-    }
-
-    public Set<FilePath> getFilePaths() {
-        return filePaths;
-    }
-
-    public void setFilePaths(Set<FilePath> filePaths) {
-        this.filePaths = filePaths;
-    }
-
     public Project getProject() {
         return project;
     }
 
     public void setProject(Project project) {
         this.project = project;
-    }
-
-    public Integer getChangeNumber() {
-        return changeNumber;
-    }
-
-    public void setChangeNumber(Integer changeNumber) {
-        this.changeNumber = changeNumber;
     }
 
     public String getSubProject() {
@@ -109,28 +68,28 @@ public class PullRequest {
         this.subProject = subProject;
     }
 
-    public Reviewer getOwner() {
-        return owner;
+    public String getChangeId() {
+        return changeId;
     }
 
-    public void setOwner(Reviewer owner) {
-        this.owner = owner;
+    public void setChangeId(String changeId) {
+        this.changeId = changeId;
     }
 
-    public Set<Reviewer> getCodeReviewers() {
-        return codeReviewers;
+    public Integer getChangeNumber() {
+        return changeNumber;
     }
 
-    public void setCodeReviewers(Set<Reviewer> codeReviewers) {
-        this.codeReviewers = codeReviewers;
+    public void setChangeNumber(Integer changeNumber) {
+        this.changeNumber = changeNumber;
     }
 
-    public Set<Reviewer> getVerifiedReviewers() {
-        return verifiedReviewers;
+    public Long getTime() {
+        return time;
     }
 
-    public void setVerifiedReviewers(Set<Reviewer> verifiedReviewers) {
-        this.verifiedReviewers = verifiedReviewers;
+    public void setTime(Long time) {
+        this.time = time;
     }
 
     public Integer getInsertions() {
@@ -149,27 +108,33 @@ public class PullRequest {
         this.deletions = deletions;
     }
 
-    public Set<Reviewer> getAllReviewers() {
-        return allReviewers;
+    public Set<Reviewer> getReviewers() {
+        return reviewers;
     }
 
-    public void setAllReviewers(Set<Reviewer> allReviewers) {
-        this.allReviewers = allReviewers;
+    public void setReviewers(Set<Reviewer> reviewers) {
+        this.reviewers = reviewers;
     }
 
-    public Set<Reviewer> getAllCommentators() {
-        return allCommentators;
+    public Reviewer getOwner() {
+        return owner;
     }
 
-    public void setAllCommentators(Set<Reviewer> allCommentators) {
-        this.allCommentators = allCommentators;
+    public void setOwner(Reviewer owner) {
+        this.owner = owner;
     }
 
-    public Set<Reviewer> getAllSpecificCodeReviewers() {
-        return allSpecificCodeReviewers;
+    public Set<FilePath> getFilePaths() {
+        return filePaths;
     }
 
-    public void setAllSpecificCodeReviewers(Set<Reviewer> allSpecificCodeReviewers) {
-        this.allSpecificCodeReviewers = allSpecificCodeReviewers;
+    public void setFilePaths(Set<FilePath> filePaths) {
+        this.filePaths = filePaths;
+    }
+
+    public void setFilePaths(List<String> filePaths) {
+        Set<FilePath> result = new HashSet<>();
+        filePaths.forEach(x -> result.add(new FilePath(x)));
+        this.filePaths = result;
     }
 }

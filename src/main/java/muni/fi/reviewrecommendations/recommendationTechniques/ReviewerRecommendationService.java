@@ -1,5 +1,6 @@
 package muni.fi.reviewrecommendations.recommendationTechniques;
 
+import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestDAO;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestService;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
@@ -20,7 +21,7 @@ import java.util.stream.Collectors;
 public class ReviewerRecommendationService {
 
     @Value("${recommendation.reviewer.retired}")
-    private int timeRetiredInMonths;
+    private long timeRetiredInMonths;
 
     @Value("${recommendation.project}")
     private String project;
@@ -31,8 +32,8 @@ public class ReviewerRecommendationService {
     @Autowired
     private PullRequestService pullRequestService;
 
-    public List<Reviewer> recommend(ReviewerRecommendation reviewerRecommendation, Review review) {
-        Map<Reviewer, Double> map = reviewerRecommendation.reviewersRankingAlgorithm(review);
+    public List<Reviewer> recommend(ReviewerRecommendation reviewerRecommendation, PullRequest pullRequest) {
+        Map<Reviewer, Double> map = reviewerRecommendation.recommend(pullRequest);
         map = sortByValue(map);
         List<Reviewer> result = new ArrayList<>();
         for (Map.Entry<Reviewer, Double> entry : map.entrySet()) {
@@ -40,18 +41,18 @@ public class ReviewerRecommendationService {
             result.add(entry.getKey());
         }
 
-        return processResult(result, review);
+        return processResult(result, pullRequest);
     }
 
-    public List<Reviewer> recommend(ReviewerRecommendation reviewerRecommendation1, ReviewerRecommendation reviewerRecommendation2, Review review) {
-        Map<Reviewer, Double> map1 = reviewerRecommendation1.reviewersRankingAlgorithm(review);
+    public List<Reviewer> recommend(ReviewerRecommendation reviewerRecommendation1, ReviewerRecommendation reviewerRecommendation2, PullRequest pullRequest) {
+        Map<Reviewer, Double> map1 = reviewerRecommendation1.recommend(pullRequest);
         map1 = sortByValue(map1);
         List<Reviewer> result1 = new ArrayList<>();
         for (Map.Entry<Reviewer, Double> entry : map1.entrySet()) {
             result1.add(entry.getKey());
         }
 
-        Map<Reviewer, Double> map2 = reviewerRecommendation2.reviewersRankingAlgorithm(review);
+        Map<Reviewer, Double> map2 = reviewerRecommendation2.recommend(pullRequest);
         map2 = sortByValue(map2);
         List<Reviewer> result2 = new ArrayList<>();
         for (Map.Entry<Reviewer, Double> entry : map2.entrySet()) {
@@ -60,7 +61,7 @@ public class ReviewerRecommendationService {
 
         List<Reviewer> result = combine(result1, result2);
 
-        return processResult(result, review);
+        return processResult(result, pullRequest);
     }
 
     private <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
@@ -75,26 +76,32 @@ public class ReviewerRecommendationService {
                 ));
     }
 
-    private List<Reviewer> processResult(List<Reviewer> reviewList, Review review) {
-        List<Reviewer> result;  //= removeRetiredReviewers(reviewList, review); TODO: uncomment later
-        if (reviewList.size() > 10) {
-            result = reviewList.subList(0, 10);
-        } else {
-            result = reviewList;
-        }
+    private List<Reviewer> processResult(List<Reviewer> reviewList, PullRequest pullRequest) {
+        List<Reviewer> result = removeRetiredReviewers(reviewList, pullRequest);
+//        if (reviewList.size() > 10) {
+//            result = reviewList; //.subList(0, 10);    not good for MRR tests
+//        } else {
+//            result = reviewList;
+//        }
         for (int x = 0; x < result.size(); x++) {
             System.out.println((x + 1) + " " + result.get(x).getName());
         }
         return result;
     }
 
-    private List<Reviewer> removeRetiredReviewers(List<Reviewer> reviewersList, Review review) {
+    private List<Reviewer> removeRetiredReviewers(List<Reviewer> reviewersList, PullRequest pullRequest) {
         long timeRetired = timeRetiredInMonths * 30 * 24 * 60 * 60 * 1000;
         List<Reviewer> result = new ArrayList<>();
+        List<Reviewer> removedReviewers = new ArrayList<>();
         for (Reviewer reviewer : reviewersList) {
-            if (pullRequestService.findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(reviewer, review.getTime(), review.getTime() - timeRetired, project).size() > 0) {
+            if (pullRequestService.findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(reviewer, pullRequest.getTime(), pullRequest.getTime() - timeRetired, project).size() > 0) {
                 result.add(reviewer);
+            } else {
+                removedReviewers.add(reviewer);
             }
+        }
+        for (int x = 0; x < removedReviewers.size(); x++) {
+            result.add(removedReviewers.get(x));
         }
         return result;
     }

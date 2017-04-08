@@ -3,9 +3,9 @@ package muni.fi.reviewrecommendations.db;
 import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.reviewrecommendations.common.GerritBrowser;
+import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestService;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
-import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendationService;
 import muni.fi.reviewrecommendations.recommendationTechniques.revfinder.RevFinder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,13 +39,13 @@ public class ReviewerController {
         String projectName = "Android";
 
         //String changeId = pullRequestDAO.findByChangeNumber(new Integer(gerritChangeNumber)).get(0).getChangeId();
-        Review review = new Review();
-        review.setFilePaths(gerritBrowser.getFilePaths(gerritChangeNumber));
+        PullRequest pullRequest = new PullRequest();
+        pullRequest.setFilePaths(gerritBrowser.getFilePaths(gerritChangeNumber));
 
         ChangeInfo changeInfo = gerritBrowser.getChange(gerritChangeNumber);
         RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(changeInfo.created.getTime(), projectName));
         //ReviewBot reviewBot = new ReviewBot(gitBrowser, gerritBrowser);
 
-        return reviewerRecommendationService.recommend(revFinder, review);
+        return reviewerRecommendationService.recommend(revFinder, pullRequest);
     }
 }

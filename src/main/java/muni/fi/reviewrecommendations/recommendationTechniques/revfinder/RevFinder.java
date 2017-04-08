@@ -1,7 +1,8 @@
 package muni.fi.reviewrecommendations.recommendationTechniques.revfinder;
 
+import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
+import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
-import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
 
 import java.util.*;
@@ -19,34 +20,42 @@ public class RevFinder implements ReviewerRecommendation {
     private static final int LONGEST_COMMON_SUBSTRING = 2;
     private static final int LONGEST_COMMON_SUBSEQUENCE = 3;
 
-    private List<Review> allPreviousReviews;
+    private static final boolean useSubProjectName = false;
+
+    private List<PullRequest> allPreviousReviews;
 
 
-
-    public RevFinder(List<Review> allPreviousReviews) {
+    public RevFinder(List<PullRequest> allPreviousReviews) {
+        if (useSubProjectName) {
+            allPreviousReviews.forEach(this::modifyPullRequestFilePaths);
+        }
         this.allPreviousReviews = allPreviousReviews;
     }
 
     @Override
-    public Map<Reviewer, Double> reviewersRankingAlgorithm(Review review) {
+    public Map<Reviewer, Double> recommend(PullRequest pullRequest) {
+        if (useSubProjectName) {
+            modifyPullRequestFilePaths(pullRequest);
+        }
+
         ArrayList<HashMap<Reviewer, Double>> reviewerCandidates = new ArrayList<>();
         for (int stringComparisonTechnique = 0; stringComparisonTechnique < 4;
-                stringComparisonTechnique++) {
+             stringComparisonTechnique++) {
             reviewerCandidates.add(new HashMap<>());
-            for (Review rev : allPreviousReviews) {
-                List<String> newReviewFilePaths = review.getFilePaths();
-                List<String> revFilePaths = rev.getFilePaths();
+            for (PullRequest rev : allPreviousReviews) {
+                Set<FilePath> newReviewFilePaths = pullRequest.getFilePaths();
+                Set<FilePath> revFilePaths = rev.getFilePaths();
                 double score = 0;
 
-                for (String newReviewFilePath : newReviewFilePaths) {
-                    for (String revFilePath : revFilePaths) {
-                        score += filePathSimilarity(newReviewFilePath,
-                                revFilePath, stringComparisonTechnique);
+                for (FilePath newReviewFilePath : newReviewFilePaths) {
+                    for (FilePath revFilePath : revFilePaths) {
+                        score += filePathSimilarity(newReviewFilePath.getLocation(),
+                                revFilePath.getLocation(), stringComparisonTechnique);
                     }
                 }
 
                 score = score / (double) (newReviewFilePaths.size() * revFilePaths.size());
-                if(Double.isNaN(score)){
+                if (Double.isNaN(score)) {
                     score = 0;
                 }
 
@@ -109,7 +118,7 @@ public class RevFinder implements ReviewerRecommendation {
     }
 
     private double filePathSimilarity(String path1, String path2,
-            int comparisonTechnique) {
+                                      int comparisonTechnique) {
 
         int score = 0;
         switch (comparisonTechnique) {
@@ -213,4 +222,22 @@ public class RevFinder implements ReviewerRecommendation {
 
         return dpMatrix[m][n];
     }
+
+    private String removeSlash(String filePath) {
+        String result = "";
+
+        for (int x = 0; x < filePath.length(); x++) {
+            if (filePath.charAt(x) != '/') {
+                result += filePath.charAt(x);
+            }
+        }
+        return result;
+    }
+
+    private void modifyPullRequestFilePaths(PullRequest pullRequest) {
+        Set<FilePath> filePaths = new HashSet<>();
+        pullRequest.getFilePaths().forEach(x -> filePaths.add(new FilePath(removeSlash(pullRequest.getSubProject()) + "/" + x.getLocation())));
+        pullRequest.setFilePaths(filePaths);
+    }
+
 }

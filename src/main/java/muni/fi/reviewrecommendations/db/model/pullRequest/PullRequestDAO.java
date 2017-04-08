@@ -5,7 +5,6 @@ import org.springframework.data.repository.CrudRepository;
 
 import javax.transaction.Transactional;
 import java.util.List;
-import java.util.Set;
 
 /**
  * @author Jakub Lipcak, Masaryk University
@@ -19,7 +18,7 @@ public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
 
     List<PullRequest> findByChangeNumber(Integer changeNumber);
 
-    List<PullRequest> findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(Reviewer reviewer, Long time1, Long time2, String name);
+    List<PullRequest> findByReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(Reviewer reviewer, Long time1, Long time2, String name);
 
     List<PullRequest> findByProjectNameAndTimeLessThan(String name, Long time1);
 
@@ -27,15 +26,13 @@ public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
 
     List<PullRequest> findByProjectNameOrderByTimeDesc(String name);
 
-    List<PullRequest> findByAllSpecificCodeReviewersAndProjectNameAndTimeLessThan(Reviewer reviewer, String project, Long time1);
+    List<PullRequest> findByReviewersAndProjectNameAndTimeLessThan(Reviewer reviewer, String project, Long time1);
 
-    Set<PullRequest> findByProjectNameAndFilePathsFilePathAndTimeLessThan(String name, String filePath, Long time1);
-
-    List<PullRequest> findByProjectNameAndSubProjectAndAllSpecificCodeReviewersAndTimeLessThan(String project, String subProject, Reviewer reviewer, Long time1);
+    List<PullRequest> findByProjectNameAndSubProjectAndReviewersAndTimeLessThan(String project, String subProject, Reviewer reviewer, Long time1);
 
     List<PullRequest> findByProjectNameAndSubProjectAndTimeLessThan(String project, String subProject, Long time1);
 
-    List<PullRequest> findByProjectNameAndAllSpecificCodeReviewersAndTimeLessThan(String project, Reviewer reviewer, Long time1);
+    List<PullRequest> findByProjectNameAndReviewersAndTimeLessThan(String project, Reviewer reviewer, Long time1);
 
-    List<PullRequest> findByProjectNameAndAllSpecificCodeReviewersAndOwnerAndTimeLessThan(String project, Reviewer reviewer, Reviewer owner, Long time1);
+    List<PullRequest> findByProjectNameAndReviewersAndOwnerAndTimeLessThan(String project, Reviewer reviewer, Reviewer owner, Long time1);
 }

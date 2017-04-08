@@ -1,13 +1,10 @@
 package muni.fi.reviewrecommendations.db.model.pullRequest;
 
-import com.google.common.collect.Lists;
-import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
-import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.List;
 
 /**
  * Created by Kubo on 3.2.2017.
@@ -35,47 +32,25 @@ public class PullRequestService {
     }
 
     public List<PullRequest> findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(Reviewer reviewer, Long time1, Long time2, String name) {
-        return pullRequestDAO.findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(reviewer, time1, time2, name);
+        return pullRequestDAO.findByReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(reviewer, time1, time2, name);
     }
 
     public List<PullRequest> findByProjectName(String name) {
         return pullRequestDAO.findByProjectName(name);
     }
 
-    public List<Review> getAllPreviousReviews(Long changeTime, String projectName) {
+    public List<PullRequest> getAllPreviousReviews(Long changeTime, String projectName) {
+        return pullRequestDAO.findByTimeLessThanAndProjectName(changeTime, projectName);
+    }
 
-        List<Review> allPreviousReviews = new ArrayList<>();
-        //Set<Reviewer> reviewersWithAtLeastOneReview = new HashSet<>();
+    private String removeSlash(String filePath) {
+        String result = "";
 
-        Set<PullRequest> pullRequests = new HashSet<>(Lists.newArrayList(pullRequestDAO.findByTimeLessThanAndProjectName(changeTime, projectName)));
-
-        /*for (PullRequest pullRequest : pullRequests) {
-            for (Reviewer reviewer : pullRequest.getCodeReviewers()) {
-                reviewersWithAtLeastOneReview.add(reviewer);
+        for (int x = 0; x < filePath.length(); x++) {
+            if (filePath.charAt(x) != '/') {
+                result += filePath.charAt(x);
             }
-        }*/
-
-        for (PullRequest pullRequest : pullRequests) {
-            Review review = new Review();
-            review.setTime(pullRequest.getTime() * 1000);
-
-            List<String> filePaths = new ArrayList<>();
-            for (FilePath filePath : pullRequest.getFilePaths()) {
-                //filePaths.add(pullRequest.getSubProject().hashCode() + "/" + filePath.getFilePath());     //Improvement in data for the algorithm
-                filePaths.add(filePath.getFilePath());
-            }
-            review.setFilePaths(filePaths);
-            review.setTime(pullRequest.getTime());
-            review.setInsertions(pullRequest.getInsertions());
-            review.setDeletions(pullRequest.getDeletions());
-            review.setSubProject(pullRequest.getSubProject());
-            review.setOwner(pullRequest.getOwner());
-
-            review.setReviewers(new ArrayList<>(pullRequest.getAllSpecificCodeReviewers()));
-            //review.setReviewers(new ArrayList<>(mergeReviewers(pullRequest, reviewersWithAtLeastOneReview)));
-
-            allPreviousReviews.add(review);
         }
-        return allPreviousReviews;
+        return result;
     }
 }

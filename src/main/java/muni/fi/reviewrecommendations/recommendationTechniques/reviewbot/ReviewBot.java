@@ -4,9 +4,10 @@ import com.google.gerrit.extensions.common.AccountInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.common.GitBrowser;
+import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
+import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
-import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.lib.ObjectId;
@@ -41,18 +42,18 @@ public class ReviewBot implements ReviewerRecommendation {
     }
 
     @Override
-    public Map<Reviewer, Double> reviewersRankingAlgorithm(Review review) {
+    public Map<Reviewer, Double> recommend(PullRequest pullRequest) {
 
         Map<RevCommit, Double> resultMap = new HashMap<>();
-        for (String filePath : review.getFilePaths()) {
-            List<CommitAndPathWrapper> fileCommitHistory = gitBrowser.getFileCommitHistory(filePath);
+        for (FilePath filePath : pullRequest.getFilePaths()) {
+            List<CommitAndPathWrapper> fileCommitHistory = gitBrowser.getFileCommitHistory(filePath.getLocation());
             if (fileCommitHistory.size() == 1) {
                 continue;
             }
-            Set<Integer> lines = getLinesAffectedByCommit(fileCommitHistory.get(0).getRevCommit(), fileCommitHistory.get(1).getRevCommit(), filePath);
-            List<List<RevCommit>> lch = lineChangeHistory(filePath, lines, fileCommitHistory);
+            Set<Integer> lines = getLinesAffectedByCommit(fileCommitHistory.get(0).getRevCommit(), fileCommitHistory.get(1).getRevCommit(), filePath.getLocation());
+            List<List<RevCommit>> lch = lineChangeHistory(filePath.getLocation(), lines, fileCommitHistory);
             for (int x = 0; x < lch.size(); x++) {
-                double points = getInitialPointForThisFile(filePath);
+                double points = getInitialPointForThisFile(filePath.getLocation());
                 for (int y = 0; y < lch.get(x).size(); y++) {
                     RevCommit entry = lch.get(x).get(y);
                     if (resultMap.containsKey(entry)) {

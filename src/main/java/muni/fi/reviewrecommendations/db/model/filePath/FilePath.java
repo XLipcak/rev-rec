@@ -12,15 +12,20 @@ public class FilePath {
     @Id
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
-    private String filePath;
+    private String location;
+
     @ManyToOne(fetch = FetchType.EAGER)
     private PullRequest pullRequest;
 
     public FilePath() {
     }
 
-    public FilePath(String filePath, PullRequest pullRequest) {
-        this.filePath = filePath;
+    public FilePath(String location) {
+        this.location = location;
+    }
+
+    public FilePath(String location, PullRequest pullRequest) {
+        this.location = location;
         this.pullRequest = pullRequest;
     }
 
@@ -32,12 +37,12 @@ public class FilePath {
         this.id = id;
     }
 
-    public String getFilePath() {
-        return filePath;
+    public String getLocation() {
+        return location;
     }
 
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
+    public void setLocation(String filePath) {
+        this.location = filePath;
     }
 
     public PullRequest getPullRequest() {

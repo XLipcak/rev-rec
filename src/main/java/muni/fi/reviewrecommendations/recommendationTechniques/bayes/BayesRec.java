@@ -5,7 +5,6 @@ import muni.fi.reviewrecommendations.db.model.filePath.FilePathDAO;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestDAO;
 import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
-import muni.fi.reviewrecommendations.recommendationTechniques.Review;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
 import org.eclipse.recommenders.jayes.BayesNet;
 import org.eclipse.recommenders.jayes.BayesNode;
@@ -25,7 +24,7 @@ import java.util.stream.Collectors;
  * @author Jakub Lipcak, Masaryk University
  */
 @Service
-public class Bayes implements ReviewerRecommendation {
+public class BayesRec implements ReviewerRecommendation {
 
     private static final double MINIMAL_PERCENTAGE_VALUE = 0.01;
 
@@ -50,7 +49,7 @@ public class Bayes implements ReviewerRecommendation {
     List<Reviewer> allOwners;
     List<String> allSubProjects;
 
-    public Bayes() {
+    public BayesRec() {
     }
 
     public void buildNetwork(Long timeStamp) {
@@ -72,7 +71,7 @@ public class Bayes implements ReviewerRecommendation {
         index = 0;
         for (Reviewer reviewer : allReviewers) {
             reviewersOutcomes[index] = reviewer.getId().toString();
-            reviewersProbabilities[index] = ((double) (pullRequestDAO.findByAllSpecificCodeReviewersAndProjectNameAndTimeLessThan(reviewer, project, timeStamp).size()) / allReviewersSize);
+            reviewersProbabilities[index] = ((double) (pullRequestDAO.findByReviewersAndProjectNameAndTimeLessThan(reviewer, project, timeStamp).size()) / allReviewersSize);
             index++;
             //System.out.println(index);
         }
@@ -92,9 +91,9 @@ public class Bayes implements ReviewerRecommendation {
         }
 
         for (Reviewer reviewer : allReviewers) {
-            double denumeratorSize = (double) pullRequestDAO.findByProjectNameAndAllSpecificCodeReviewersAndTimeLessThan(project, reviewer, timeStamp).size();
+            double denumeratorSize = (double) pullRequestDAO.findByProjectNameAndReviewersAndTimeLessThan(project, reviewer, timeStamp).size();
             for (String subProject : subProjectsArray) {
-                subProjectProbabilities[index] = ((double) pullRequestDAO.findByProjectNameAndSubProjectAndAllSpecificCodeReviewersAndTimeLessThan(project, subProject, reviewer, timeStamp).size() /
+                subProjectProbabilities[index] = ((double) pullRequestDAO.findByProjectNameAndSubProjectAndReviewersAndTimeLessThan(project, subProject, reviewer, timeStamp).size() /
                         denumeratorSize);
                 index++;
             }
@@ -112,10 +111,10 @@ public class Bayes implements ReviewerRecommendation {
         double[] filePathNodeProbabilities = new double[allReviewers.size() * allFilePaths.size()];
         index = 0;
         for (Reviewer reviewer : allReviewers) {
-            double denumeratorSize = (double) filePathDAO.findByPullRequestProjectNameAndPullRequestAllSpecificCodeReviewersAndPullRequestTimeLessThan(project, reviewer, timeStamp).size();
+            double denumeratorSize = (double) filePathDAO.findByPullRequestProjectNameAndPullRequestReviewersAndPullRequestTimeLessThan(project, reviewer, timeStamp).size();
             for (String filePath : filePathNodeOutcomes) {
                 filePathNodeProbabilities[index] = //1d / filePathNodeOutcomes.length;
-                        filePathDAO.findByPullRequestProjectNameAndFilePathAndPullRequestAllSpecificCodeReviewersAndPullRequestTimeLessThan(project,
+                        filePathDAO.findByPullRequestProjectNameAndLocationAndPullRequestReviewersAndPullRequestTimeLessThan(project,
                                 filePath, reviewer, timeStamp).size() / denumeratorSize;
                 index++;
                 System.out.println(index + "/" + filePathNodeProbabilities.length);
@@ -138,9 +137,9 @@ public class Bayes implements ReviewerRecommendation {
         double[] ownerNodeProbabilities = new double[allReviewers.size() * allOwners.size()];
         index = 0;
         for (Reviewer reviewer : allReviewers) {
-            double denumeratorSize = (double) (pullRequestDAO.findByProjectNameAndAllSpecificCodeReviewersAndTimeLessThan(project, reviewer, timeStamp).size());
+            double denumeratorSize = (double) (pullRequestDAO.findByProjectNameAndReviewersAndTimeLessThan(project, reviewer, timeStamp).size());
             for (Reviewer owner : allOwners) {
-                ownerNodeProbabilities[index] = (double) pullRequestDAO.findByProjectNameAndAllSpecificCodeReviewersAndOwnerAndTimeLessThan(project, reviewer, owner, timeStamp).size() /
+                ownerNodeProbabilities[index] = (double) pullRequestDAO.findByProjectNameAndReviewersAndOwnerAndTimeLessThan(project, reviewer, owner, timeStamp).size() /
                         denumeratorSize;
                 index++;
             }
@@ -157,10 +156,10 @@ public class Bayes implements ReviewerRecommendation {
     }
 
     @Override
-    public Map<Reviewer, Double> reviewersRankingAlgorithm(Review review) {
+    public Map<Reviewer, Double> recommend(PullRequest pullRequest) {
         Map<Reviewer, Double> result = new HashMap<>();
-        for (String x : review.getFilePaths()) {
-            Map<Reviewer, Double> resultList = recommend(review, x);
+        for (FilePath x : pullRequest.getFilePaths()) {
+            Map<Reviewer, Double> resultList = recommend(pullRequest, x.getLocation());
             resultList = sortByValue(resultList);
             double y = resultList.size();
             for (Map.Entry<Reviewer, Double> entry : resultList.entrySet()) {
@@ -175,13 +174,13 @@ public class Bayes implements ReviewerRecommendation {
         return result;
     }
 
-    private Map<Reviewer, Double> recommend(Review review, String fileEnding) {
+    private Map<Reviewer, Double> recommend(PullRequest pullRequest, String fileEnding) {
         Map<Reviewer, Double> result = new HashMap<>();
 
         Map<BayesNode, String> evidence = new HashMap<BayesNode, String>();
 
-        if (new HashSet<>(allSubProjects).contains(review.getSubProject())) {
-            evidence.put(subProjectNode, review.getSubProject());
+        if (new HashSet<>(allSubProjects).contains(pullRequest.getSubProject())) {
+            evidence.put(subProjectNode, pullRequest.getSubProject());
         } else {
             System.out.println("Bayes otherSubProject");
             evidence.put(subProjectNode, "otherSubProject");
@@ -195,8 +194,8 @@ public class Bayes implements ReviewerRecommendation {
         }
 
 
-        if (new HashSet<>(allOwners).contains(review.getOwner())) {
-            evidence.put(ownerNode, review.getOwner().getId().toString());
+        if (new HashSet<>(allOwners).contains(pullRequest.getOwner())) {
+            evidence.put(ownerNode, pullRequest.getOwner().getId().toString());
         } else {
             System.out.println("Bayes -1");
             evidence.put(ownerNode, "-1");
@@ -222,7 +221,7 @@ public class Bayes implements ReviewerRecommendation {
         Set<Reviewer> allReviewers = new HashSet<>();
 
         for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimeLessThan(project, timeStamp)) {
-            for (Reviewer reviewer : pullRequest.getAllSpecificCodeReviewers()) {
+            for (Reviewer reviewer : pullRequest.getReviewers()) {
                 allReviewers.add(reviewer);
             }
         }
@@ -280,7 +279,7 @@ public class Bayes implements ReviewerRecommendation {
         Set<String> allFilePaths = new HashSet<>();
         for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimeLessThan(project, timeStamp)) {
             for (FilePath filePath : pullRequest.getFilePaths()) {
-                allFilePaths.add(filePath.getFilePath());
+                allFilePaths.add(filePath.getLocation());
             }
         }
         allFilePaths.add("otherFilePath");

@@ -92,7 +92,7 @@ public class DataLoader {
                     pullRequest.setChangeId(Integer.toString((Integer) obj.get("changeId")));
                     pullRequest.setTime(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse((String) obj.get("submit_date")).getTime());
 
-                    pullRequest.setAllSpecificCodeReviewers(reviewers);
+                    pullRequest.setReviewers(reviewers);
                     pullRequest.setSubProject(obj.getString("project"));
                     pullRequest.setProject(project);
                     pullRequest = pullRequestDAO.save(pullRequest);
@@ -101,7 +101,7 @@ public class DataLoader {
                     JSONArray arr = obj.getJSONArray("files");
                     for (int i = 0; i < arr.length(); i++) {
                         FilePath filePath = new FilePath();
-                        filePath.setFilePath((String) arr.get(i));
+                        filePath.setLocation((String) arr.get(i));
                         filePath.setPullRequest(pullRequest);
                         filePathDAO.save(filePath);
                     }
@@ -149,9 +149,10 @@ public class DataLoader {
                             for (int i = 0; i < arr.length(); i++) {
                                 paths.add(arr.getString(i));
                             }
-
-                            saveChangeRequest(changeInfo, projectName, gerritBrowser, getSetOfReviewersFromJsonObject(obj, gerritBrowser), paths);
+                            Long timeCreated = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse((String) obj.get("submit_date")).getTime();
+                            saveChangeRequest(changeInfo, projectName, gerritBrowser, getSetOfReviewersFromJsonObject(obj, gerritBrowser), paths, timeCreated);
                         } catch (HttpStatusException | IndexOutOfBoundsException ex) {
+                            System.out.println(x);
                             System.out.println(ex);
                         }
                     }
@@ -204,10 +205,10 @@ public class DataLoader {
     }
 
     private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser) throws RestApiException {
-        saveChangeRequest(changeInfo, projectName, gerritBrowser, new HashSet<>(), new ArrayList<>());
+        saveChangeRequest(changeInfo, projectName, gerritBrowser, new HashSet<>(), new ArrayList<>(), null);
     }
 
-    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser, Set<Reviewer> specificCodeReviewers, List<String> paths) throws RestApiException {
+    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser, Set<Reviewer> specificCodeReviewers, List<String> paths, Long time) throws RestApiException {
         Project project = new Project();
         if (projectDAO.findOne(projectName) != null) {
             project = projectDAO.findOne(projectName);
@@ -242,7 +243,12 @@ public class DataLoader {
 
         PullRequest pullRequest = new PullRequest();
         pullRequest.setChangeId(changeInfo.changeId);
-        pullRequest.setTime(changeInfo.created.getTime());
+        if (time == null) {
+            pullRequest.setTime(changeInfo.created.getTime());
+        } else {
+            pullRequest.setTime(time);
+        }
+
         pullRequest.setProject(project);
         pullRequest.setChangeNumber(changeInfo._number);
         pullRequest.setSubProject(changeInfo.project);
@@ -254,7 +260,7 @@ public class DataLoader {
         pullRequest.setVerifiedReviewers(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getReviewers(changeInfo, "Verified")));
         pullRequest.setAllReviewers(allReviewers);
         pullRequest.setAllCommentators(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getCommentators(changeInfo)));*/
-        pullRequest.setAllSpecificCodeReviewers(specificCodeReviewers);
+        pullRequest.setReviewers(specificCodeReviewers);
 
         pullRequest = pullRequestDAO.save(pullRequest);
 
