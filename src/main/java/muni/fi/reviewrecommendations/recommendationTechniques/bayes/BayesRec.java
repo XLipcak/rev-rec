@@ -52,7 +52,7 @@ public class BayesRec implements ReviewerRecommendation {
     public BayesRec() {
     }
 
-    public void buildNetwork(Long timeStamp) {
+    public void buildModel(Long timeStamp) {
         allFilePaths = findAllFilePaths(timeStamp);
         allOwners = findAllOwners(timeStamp);
         allReviewers = findAllCodeReviewers(timeStamp);

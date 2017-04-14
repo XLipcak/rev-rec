@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -93,7 +94,7 @@ public class InitialLoader implements CommandLineRunner {
 
             List<Reviewer> reviewers = reviewerRecommendationService.recommend(revFinder, pullRequest);
 
-            System.out.println(iterationsCounter + " " + pullRequest.getChangeNumber());
+            printData(iterationsCounter + " " + pullRequest.getChangeNumber());
 
             for (int x = 0; x < 1 && x < reviewers.size(); x++) {
                 if (pullRequest.getReviewers().contains(reviewers.get(x))) {
@@ -131,18 +132,18 @@ public class InitialLoader implements CommandLineRunner {
                 }
             }
 
-            System.out.println("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
+            printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
         }
 
-        System.out.println("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
+        printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
     }
 
     private void testTechniqueBayes(String projectName) throws IOException, RestApiException {
@@ -163,7 +164,7 @@ public class InitialLoader implements CommandLineRunner {
             RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName));*/
             if (iterationsCounter % 500 == 0) {
                 if (iterationsCounter + 500 < pullRequests.size()) {
-                    reviewerRecommendation.buildNetwork(pullRequests.get(iterationsCounter + 500).getTime());
+                    reviewerRecommendation.buildModel(pullRequests.get(iterationsCounter + 500).getTime());
                 }
             }
 
@@ -174,7 +175,7 @@ public class InitialLoader implements CommandLineRunner {
                     pullRequest, findSelfReviewers(projectName)); //12 months*/
 
             iterationsCounter++;
-            System.out.println(iterationsCounter + " " + pullRequest.getChangeNumber());
+            printData(iterationsCounter + " " + pullRequest.getChangeNumber());
 
             for (int x = 0; x < 1 && x < reviewers.size(); x++) {
                 if (pullRequest.getReviewers().contains(reviewers.get(x))) {
@@ -212,18 +213,18 @@ public class InitialLoader implements CommandLineRunner {
                 }
             }
 
-            System.out.println("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
-            System.out.println("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
+            printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
+            printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
         }
 
-        System.out.println("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
-        System.out.println("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
+        printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
+        printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
     }
 
     Set<Reviewer> mergeReviewers(PullRequest pullRequest, Set<Reviewer> reviewersWithAtLeastOneReview) {
@@ -277,5 +278,16 @@ public class InitialLoader implements CommandLineRunner {
             }
         }
         return result;
+    }
+
+    private void printData(String text) {
+        try {
+            System.out.println(text);
+            FileWriter fw = new FileWriter("output/" + project + ".txt", true);
+            fw.write(text + "\n");
+            fw.close();
+        } catch (IOException ioe) {
+            System.err.println("IOException: " + ioe.getMessage());
+        }
     }
 }
