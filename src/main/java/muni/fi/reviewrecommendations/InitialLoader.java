@@ -1,7 +1,6 @@
 package muni.fi.reviewrecommendations;
 
 import com.google.gerrit.extensions.restapi.RestApiException;
-import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.db.DataLoader;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestDAO;
@@ -53,7 +52,7 @@ public class InitialLoader implements CommandLineRunner {
     public void run(String... strings) throws Exception {
         //GerritBrowser gerritBrowser = new GerritBrowser("https://android-review.googlesource.com");
         //GitBrowser gitBrowser = new GitBrowser("sdk", false);
-        GerritBrowser gerritBrowser = new GerritBrowser("https://codereview.qt-project.org");
+        //GerritBrowser gerritBrowser = new GerritBrowser("https://codereview.qt-project.org");
 
 
         //GerritBrowser gerritBrowser = new GerritBrowser("https://review.openstack.org/");
@@ -87,9 +86,7 @@ public class InitialLoader implements CommandLineRunner {
                 break;
             }
             reviewList = reviewList.subList(1, reviewList.size());
-            //List<Review> reviews = pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName);
-            RevFinder revFinder = new RevFinder(//reviewList
-                    pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName));
+            RevFinder revFinder = new RevFinder(reviewList);
 
 
             List<Reviewer> reviewers = reviewerRecommendationService.recommend(revFinder, pullRequest);
@@ -137,6 +134,15 @@ public class InitialLoader implements CommandLineRunner {
             printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
             printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
             printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
+
+            printData("top1Counter: " + top1Counter);
+            printData("top3Counter: " + top3Counter);
+            printData("top5Counter: " + top5Counter);
+            printData("top10Counter: " + top10Counter);
+            printData("mrrValue: " + mrrValue);
+            printData("iterationsCounter: " + iterationsCounter);
+
+            printData("_____________________________________________");
         }
 
         printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
@@ -157,14 +163,19 @@ public class InitialLoader implements CommandLineRunner {
 
         int iterationsCounter = 0;
         List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(projectName);
+        int foldSize = pullRequests.size() / 10;
+        int modelBuildCounter = 0;
 
         for (PullRequest pullRequest : pullRequests) {
 
             /*List<Review> reviews = pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName);
             RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName));*/
-            if (iterationsCounter % 500 == 0) {
-                if (iterationsCounter + 500 < pullRequests.size()) {
-                    reviewerRecommendation.buildModel(pullRequests.get(iterationsCounter + 500).getTime());
+            if (iterationsCounter % foldSize == 0) {
+                if (modelBuildCounter < 9) {
+                    reviewerRecommendation.buildModel(pullRequests.get(iterationsCounter + foldSize).getTime());
+                    modelBuildCounter++;
+                } else {
+                    break;
                 }
             }
 
