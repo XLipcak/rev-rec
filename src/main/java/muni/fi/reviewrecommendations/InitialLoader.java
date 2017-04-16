@@ -64,9 +64,9 @@ public class InitialLoader implements CommandLineRunner {
 
         //dataLoader.loadDataByChangeIdsFromFile("data/qt.json", gerritBrowser, "qt");
 
-        testTechniqueRevFinder(project);
+        //testTechniqueRevFinder(project);
 
-        //testTechniqueBayes(project);
+        testTechniqueBayes(project);
     }
 
     private void testTechniqueRevFinder(String projectName) throws IOException, RestApiException {
@@ -79,14 +79,14 @@ public class InitialLoader implements CommandLineRunner {
 
         int iterationsCounter = 0;
         List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(projectName);
-        List<PullRequest> reviewList = pullRequests.subList(iterationsCounter, pullRequests.size());
+        RevFinder revFinder = new RevFinder(pullRequests);
         for (PullRequest pullRequest : pullRequests) {
             iterationsCounter++;
-            if (reviewList.size() == 1) {
+            if (revFinder.getAllPreviousReviews().size() == 1) {
                 break;
             }
-            reviewList = reviewList.subList(1, reviewList.size());
-            RevFinder revFinder = new RevFinder(reviewList);
+
+            revFinder.setAllPreviousReviews(revFinder.getAllPreviousReviews().subList(1, revFinder.getAllPreviousReviews().size()));
 
 
             List<Reviewer> reviewers = reviewerRecommendationService.recommend(revFinder, pullRequest);
@@ -163,7 +163,7 @@ public class InitialLoader implements CommandLineRunner {
 
         int iterationsCounter = 0;
         List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(projectName);
-        int foldSize = pullRequests.size() / 10;
+        int foldSize = pullRequests.size() / 11;
         int modelBuildCounter = 0;
 
         for (PullRequest pullRequest : pullRequests) {
@@ -171,7 +171,7 @@ public class InitialLoader implements CommandLineRunner {
             /*List<Review> reviews = pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName);
             RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName));*/
             if (iterationsCounter % foldSize == 0) {
-                if (modelBuildCounter < 9) {
+                if (modelBuildCounter < 10) {
                     reviewerRecommendation.buildModel(pullRequests.get(iterationsCounter + foldSize).getTime());
                     modelBuildCounter++;
                 } else {
@@ -229,6 +229,14 @@ public class InitialLoader implements CommandLineRunner {
             printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
             printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
             printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
+
+            printData("top1Counter: " + top1Counter);
+            printData("top3Counter: " + top3Counter);
+            printData("top5Counter: " + top5Counter);
+            printData("top10Counter: " + top10Counter);
+            printData("mrrValue: " + mrrValue);
+            printData("iterationsCounter: " + iterationsCounter);
+            printData("_____________________________________________");
         }
 
         printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");

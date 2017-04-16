@@ -240,4 +240,11 @@ public class RevFinder implements ReviewerRecommendation {
         pullRequest.setFilePaths(filePaths);
     }
 
+    public List<PullRequest> getAllPreviousReviews() {
+        return allPreviousReviews;
+    }
+
+    public void setAllPreviousReviews(List<PullRequest> allPreviousReviews) {
+        this.allPreviousReviews = allPreviousReviews;
+    }
 }
