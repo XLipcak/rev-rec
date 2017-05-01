@@ -33,6 +33,10 @@ public class RevFinder implements ReviewerRecommendation {
     }
 
     @Override
+    public void buildModel() {
+    }
+
+    @Override
     public Map<Reviewer, Double> recommend(PullRequest pullRequest) {
         if (useSubProjectName) {
             modifyPullRequestFilePaths(pullRequest);

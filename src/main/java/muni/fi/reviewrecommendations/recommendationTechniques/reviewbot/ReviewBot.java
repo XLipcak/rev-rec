@@ -42,6 +42,10 @@ public class ReviewBot implements ReviewerRecommendation {
     }
 
     @Override
+    public void buildModel() {
+    }
+
+    @Override
     public Map<Reviewer, Double> recommend(PullRequest pullRequest) {
 
         Map<RevCommit, Double> resultMap = new HashMap<>();

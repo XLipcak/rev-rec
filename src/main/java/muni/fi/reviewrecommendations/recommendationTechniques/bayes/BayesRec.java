@@ -52,6 +52,11 @@ public class BayesRec implements ReviewerRecommendation {
     public BayesRec() {
     }
 
+    @Override
+    public void buildModel() {
+        buildModel(Long.MAX_VALUE);
+    }
+
     public void buildModel(Long timeStamp) {
         allFilePaths = findAllFilePaths(timeStamp);
         allOwners = findAllOwners(timeStamp);
