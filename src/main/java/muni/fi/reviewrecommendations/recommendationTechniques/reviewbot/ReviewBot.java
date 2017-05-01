@@ -6,7 +6,7 @@ import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.common.GitBrowser;
 import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
@@ -46,7 +46,7 @@ public class ReviewBot implements ReviewerRecommendation {
     }
 
     @Override
-    public Map<Reviewer, Double> recommend(PullRequest pullRequest) {
+    public Map<Developer, Double> recommend(PullRequest pullRequest) {
 
         Map<RevCommit, Double> resultMap = new HashMap<>();
         for (FilePath filePath : pullRequest.getFilePaths()) {
@@ -74,7 +74,7 @@ public class ReviewBot implements ReviewerRecommendation {
     }
 
 
-    private Map<Reviewer, Double> propagateResultToUserPoints(Map<RevCommit, Double> pointsMap) {
+    private Map<Developer, Double> propagateResultToUserPoints(Map<RevCommit, Double> pointsMap) {
         Map<AccountInfo, Double> reviewerCandidates = new HashMap<>();
         Set<String> emails = new HashSet<>();
 
@@ -94,7 +94,7 @@ public class ReviewBot implements ReviewerRecommendation {
             }
 
             //normalisation, to refactor later
-            Map<Reviewer, Double> result = new HashMap<>();
+            Map<Developer, Double> result = new HashMap<>();
             for (String email : emails) {
                 double points = 0;
                 AccountInfo accountInfo = null;
@@ -104,7 +104,7 @@ public class ReviewBot implements ReviewerRecommendation {
                         accountInfo = entry.getKey();
                     }
                 }
-                result.put(new Reviewer(accountInfo.email, accountInfo.name), points);
+                result.put(new Developer(accountInfo.email, accountInfo.name), points);
             }
             return sortByValue(result);
         } catch (RestApiException ex) {

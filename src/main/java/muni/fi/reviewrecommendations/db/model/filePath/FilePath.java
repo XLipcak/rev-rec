@@ -8,6 +8,7 @@ import javax.persistence.*;
  * @author Jakub Lipcak, Masaryk University
  */
 @Entity
+@Table(name = "filepath")
 public class FilePath {
     @Id
     @GeneratedValue(strategy = GenerationType.TABLE)

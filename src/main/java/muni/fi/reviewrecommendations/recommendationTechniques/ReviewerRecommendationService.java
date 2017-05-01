@@ -3,7 +3,7 @@ package muni.fi.reviewrecommendations.recommendationTechniques;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestDAO;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestService;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -39,11 +39,11 @@ public class ReviewerRecommendationService {
      * @param pullRequest
      * @return
      */
-    public List<Reviewer> recommend(ReviewerRecommendation reviewerRecommendation, PullRequest pullRequest) {
-        Map<Reviewer, Double> map = reviewerRecommendation.recommend(pullRequest);
+    public List<Developer> recommend(ReviewerRecommendation reviewerRecommendation, PullRequest pullRequest) {
+        Map<Developer, Double> map = reviewerRecommendation.recommend(pullRequest);
         map = sortByValue(map);
-        List<Reviewer> result = new ArrayList<>();
-        for (Map.Entry<Reviewer, Double> entry : map.entrySet()) {
+        List<Developer> result = new ArrayList<>();
+        for (Map.Entry<Developer, Double> entry : map.entrySet()) {
             //System.out.println(entry.getKey().getName() + " => " + entry.getValue());
             result.add(entry.getKey());
         }
@@ -64,8 +64,8 @@ public class ReviewerRecommendationService {
                 ));
     }
 
-    private List<Reviewer> processResult(List<Reviewer> reviewList, PullRequest pullRequest) {
-        List<Reviewer> result = removeRetiredReviewers(reviewList, pullRequest);
+    private List<Developer> processResult(List<Developer> reviewList, PullRequest pullRequest) {
+        List<Developer> result = removeRetiredReviewers(reviewList, pullRequest);
 
         for (int x = 0; x < result.size(); x++) {
             System.out.println((x + 1) + " " + result.get(x).getName());
@@ -73,12 +73,12 @@ public class ReviewerRecommendationService {
         return result;
     }
 
-    private List<Reviewer> removeRetiredReviewers(List<Reviewer> reviewersList, PullRequest pullRequest) {
+    private List<Developer> removeRetiredReviewers(List<Developer> reviewersList, PullRequest pullRequest) {
         long timeRetired = timeRetiredInMonths * 30 * 24 * 60 * 60 * 1000;
-        List<Reviewer> result = new ArrayList<>();
-        List<Reviewer> removedReviewers = new ArrayList<>();
-        for (Reviewer reviewer : reviewersList) {
-            if (pullRequestService.findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(reviewer, pullRequest.getTime(), pullRequest.getTime() - timeRetired, project).size() > 0) {
+        List<Developer> result = new ArrayList<>();
+        List<Developer> removedReviewers = new ArrayList<>();
+        for (Developer reviewer : reviewersList) {
+            if (pullRequestService.findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(reviewer, pullRequest.getTimestamp(), pullRequest.getTimestamp() - timeRetired, project).size() > 0) {
                 result.add(reviewer);
             } else {
                 removedReviewers.add(reviewer);

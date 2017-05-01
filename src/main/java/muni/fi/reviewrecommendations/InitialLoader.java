@@ -5,7 +5,7 @@ import muni.fi.reviewrecommendations.db.DataLoader;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestDAO;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestService;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendationService;
 import muni.fi.reviewrecommendations.recommendationTechniques.bayes.BayesRec;
 import muni.fi.reviewrecommendations.recommendationTechniques.revfinder.RevFinder;
@@ -64,9 +64,9 @@ public class InitialLoader implements CommandLineRunner {
 
         //dataLoader.loadDataByChangeIdsFromFile("data/qt.json", gerritBrowser, "qt");
 
-        //testTechniqueRevFinder(project);
+        testTechniqueRevFinder(project);
 
-        testTechniqueBayes(project);
+        //testTechniqueBayes(project);
     }
 
     private void testTechniqueRevFinder(String projectName) throws IOException, RestApiException {
@@ -89,33 +89,33 @@ public class InitialLoader implements CommandLineRunner {
             revFinder.setAllPreviousReviews(revFinder.getAllPreviousReviews().subList(1, revFinder.getAllPreviousReviews().size()));
 
 
-            List<Reviewer> reviewers = reviewerRecommendationService.recommend(revFinder, pullRequest);
+            List<Developer> reviewers = reviewerRecommendationService.recommend(revFinder, pullRequest);
 
             printData(iterationsCounter + " " + pullRequest.getChangeNumber());
 
             for (int x = 0; x < 1 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top1Counter++;
                     break;
                 }
             }
 
             for (int x = 0; x < 3 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top3Counter++;
                     break;
                 }
             }
 
             for (int x = 0; x < 5 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top5Counter++;
                     break;
                 }
             }
 
             for (int x = 0; x < 10 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top10Counter++;
                     break;
                 }
@@ -123,7 +123,7 @@ public class InitialLoader implements CommandLineRunner {
 
             //mrr
             for (int x = 0; x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     mrrValue += 1d / (x + 1);
                     break;
                 }
@@ -172,7 +172,7 @@ public class InitialLoader implements CommandLineRunner {
             RevFinder revFinder = new RevFinder(pullRequestService.getAllPreviousReviews(pullRequest.getTime(), projectName));*/
             if (iterationsCounter % foldSize == 0) {
                 if (modelBuildCounter < 10) {
-                    reviewerRecommendation.buildModel(pullRequests.get(iterationsCounter + foldSize).getTime());
+                    reviewerRecommendation.buildModel(pullRequests.get(iterationsCounter + foldSize).getTimestamp());
                     modelBuildCounter++;
                 } else {
                     break;
@@ -180,37 +180,37 @@ public class InitialLoader implements CommandLineRunner {
             }
 
 
-            List<Reviewer> reviewers = reviewerRecommendationService.recommend(reviewerRecommendation, pullRequest);
-            //List<Reviewer> reviewers = reviewerRecommendationService.recommend(reviewerRecommendation, revFinder, review);
-            /*List<Reviewer> reviewers = removeSelfReviewers(removeRetiredReviewers(pullRequest, 31104000000l, reviewerRecommendationService.recommend(revFinder, review), projectName),
+            List<Developer> reviewers = reviewerRecommendationService.recommend(reviewerRecommendation, pullRequest);
+            //List<Developer> reviewers = reviewerRecommendationService.recommend(reviewerRecommendation, revFinder, review);
+            /*List<Developer> reviewers = removeSelfReviewers(removeRetiredReviewers(pullRequest, 31104000000l, reviewerRecommendationService.recommend(revFinder, review), projectName),
                     pullRequest, findSelfReviewers(projectName)); //12 months*/
 
             iterationsCounter++;
             printData(iterationsCounter + " " + pullRequest.getChangeNumber());
 
             for (int x = 0; x < 1 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top1Counter++;
                     break;
                 }
             }
 
             for (int x = 0; x < 3 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top3Counter++;
                     break;
                 }
             }
 
             for (int x = 0; x < 5 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top5Counter++;
                     break;
                 }
             }
 
             for (int x = 0; x < 10 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     top10Counter++;
                     break;
                 }
@@ -218,7 +218,7 @@ public class InitialLoader implements CommandLineRunner {
 
             //mrr
             for (int x = 0; x < reviewers.size(); x++) {
-                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
                     mrrValue += 1d / (x + 1);
                     break;
                 }
@@ -246,10 +246,10 @@ public class InitialLoader implements CommandLineRunner {
         printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
     }
 
-    Set<Reviewer> mergeReviewers(PullRequest pullRequest, Set<Reviewer> reviewersWithAtLeastOneReview) {
-        Set<Reviewer> result = new HashSet<>();
+    Set<Developer> mergeReviewers(PullRequest pullRequest, Set<Developer> reviewersWithAtLeastOneReview) {
+        Set<Developer> result = new HashSet<>();
 
-        for (Reviewer reviewer : pullRequest.getReviewers()) {
+        for (Developer reviewer : pullRequest.getReviewer()) {
             if (reviewersWithAtLeastOneReview.contains(reviewer)) {
                 result.add(reviewer);
             }
@@ -263,9 +263,9 @@ public class InitialLoader implements CommandLineRunner {
     }
 
 
-    private List<Reviewer> removeSelfReviewers(List<Reviewer> reviewersList, PullRequest pullRequest, Set<Reviewer> selfReviewers) {
-        List<Reviewer> result = new ArrayList<>();
-        for (Reviewer reviewer : reviewersList) {
+    private List<Developer> removeSelfReviewers(List<Developer> reviewersList, PullRequest pullRequest, Set<Developer> selfReviewers) {
+        List<Developer> result = new ArrayList<>();
+        for (Developer reviewer : reviewersList) {
             if (pullRequest.getOwner().equals(reviewer) && !selfReviewers.contains(reviewer)) {
                 System.out.println("Self reviewer removed!");
                 //is recommended, but never did self review before
@@ -276,10 +276,10 @@ public class InitialLoader implements CommandLineRunner {
         return result;
     }
 
-    private Set<Reviewer> findSelfReviewers(String projectName) {
-        Set<Reviewer> result = new HashSet<>();
+    private Set<Developer> findSelfReviewers(String projectName) {
+        Set<Developer> result = new HashSet<>();
         for (PullRequest pullRequest : pullRequestService.findByProjectName(projectName)) {
-            for (Reviewer reviewer : pullRequest.getReviewers()) {
+            for (Developer reviewer : pullRequest.getReviewer()) {
                 if (pullRequest.getOwner().equals(reviewer)) {
                     result.add(reviewer);
                 }

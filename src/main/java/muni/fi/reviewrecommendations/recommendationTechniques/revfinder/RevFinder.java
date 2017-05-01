@@ -2,7 +2,7 @@ package muni.fi.reviewrecommendations.recommendationTechniques.revfinder;
 
 import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendation;
 
 import java.util.*;
@@ -37,12 +37,12 @@ public class RevFinder implements ReviewerRecommendation {
     }
 
     @Override
-    public Map<Reviewer, Double> recommend(PullRequest pullRequest) {
+    public Map<Developer, Double> recommend(PullRequest pullRequest) {
         if (useSubProjectName) {
             modifyPullRequestFilePaths(pullRequest);
         }
 
-        ArrayList<HashMap<Reviewer, Double>> reviewerCandidates = new ArrayList<>();
+        ArrayList<HashMap<Developer, Double>> reviewerCandidates = new ArrayList<>();
         for (int stringComparisonTechnique = 0; stringComparisonTechnique < 4;
              stringComparisonTechnique++) {
             reviewerCandidates.add(new HashMap<>());
@@ -63,7 +63,7 @@ public class RevFinder implements ReviewerRecommendation {
                     score = 0;
                 }
 
-                for (Reviewer codeReviewer : rev.getReviewers()) {
+                for (Developer codeReviewer : rev.getReviewer()) {
                     if (reviewerCandidates.get(stringComparisonTechnique).containsKey(codeReviewer)) {
                         reviewerCandidates.get(stringComparisonTechnique)
                                 .replace(codeReviewer,
@@ -90,22 +90,22 @@ public class RevFinder implements ReviewerRecommendation {
                 ));
     }
 
-    private Map<Reviewer, Double> bordaCountCombination(ArrayList<HashMap<Reviewer, Double>> reviewerCandidates) {
-        Map<Reviewer, Double> result = new HashMap<>();
+    private Map<Developer, Double> bordaCountCombination(ArrayList<HashMap<Developer, Double>> reviewerCandidates) {
+        Map<Developer, Double> result = new HashMap<>();
 
         for (int x = 0; x < 4; x++) {
             double counter = 0;
-            Map<Reviewer, Double> actualCandidates = sortByValue(reviewerCandidates.get(x));
+            Map<Developer, Double> actualCandidates = sortByValue(reviewerCandidates.get(x));
 
             //find non zero entries
-            for (Map.Entry<Reviewer, Double> entry : actualCandidates.entrySet()) {
+            for (Map.Entry<Developer, Double> entry : actualCandidates.entrySet()) {
                 if (entry.getValue() > 0) {
                     counter++;
                 }
             }
 
             //compute Borda combination
-            for (Map.Entry<Reviewer, Double> entry : actualCandidates.entrySet()) {
+            for (Map.Entry<Developer, Double> entry : actualCandidates.entrySet()) {
                 if (counter == 0) {
                     break;
                 }

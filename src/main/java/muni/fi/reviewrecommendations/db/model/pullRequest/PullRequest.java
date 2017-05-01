@@ -2,7 +2,7 @@ package muni.fi.reviewrecommendations.db.model.pullRequest;
 
 import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
 import muni.fi.reviewrecommendations.db.model.project.Project;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 
 import javax.persistence.*;
 import java.util.HashSet;
@@ -27,16 +27,17 @@ public class PullRequest {
 
     private String changeId;
     private Integer changeNumber;
-    private Long time;
+    private Long timestamp;
 
     private Integer insertions;
     private Integer deletions;
 
+    @JoinTable(name="review")
     @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Reviewer> reviewers;
+    private Set<Developer> reviewer;
 
     @OneToOne(fetch = FetchType.EAGER)
-    private Reviewer owner;
+    private Developer owner;
 
     @OneToMany(mappedBy = "pullRequest", fetch = FetchType.EAGER)
     private Set<FilePath> filePaths;
@@ -84,12 +85,12 @@ public class PullRequest {
         this.changeNumber = changeNumber;
     }
 
-    public Long getTime() {
-        return time;
+    public Long getTimestamp() {
+        return timestamp;
     }
 
-    public void setTime(Long time) {
-        this.time = time;
+    public void setTimestamp(Long time) {
+        this.timestamp = time;
     }
 
     public Integer getInsertions() {
@@ -108,19 +109,19 @@ public class PullRequest {
         this.deletions = deletions;
     }
 
-    public Set<Reviewer> getReviewers() {
-        return reviewers;
+    public Set<Developer> getReviewer() {
+        return reviewer;
     }
 
-    public void setReviewers(Set<Reviewer> reviewers) {
-        this.reviewers = reviewers;
+    public void setReviewer(Set<Developer> reviewers) {
+        this.reviewer = reviewers;
     }
 
-    public Reviewer getOwner() {
+    public Developer getOwner() {
         return owner;
     }
 
-    public void setOwner(Reviewer owner) {
+    public void setOwner(Developer owner) {
         this.owner = owner;
     }
 

@@ -13,7 +13,7 @@ import muni.fi.reviewrecommendations.db.model.project.Project;
 import muni.fi.reviewrecommendations.db.model.project.ProjectDAO;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestDAO;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import muni.fi.reviewrecommendations.db.model.reviewer.ReviewerDAO;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
@@ -86,13 +86,13 @@ public class DataLoader {
                     System.out.println(x);
                     JSONObject obj = new JSONObject(line);
 
-                    Set<Reviewer> reviewers = getSetOfReviewersFromJsonObject(obj, gerritBrowser);
+                    Set<Developer> reviewers = getSetOfReviewersFromJsonObject(obj, gerritBrowser);
 
                     PullRequest pullRequest = new PullRequest();
                     pullRequest.setChangeId(Integer.toString((Integer) obj.get("changeId")));
-                    pullRequest.setTime(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse((String) obj.get("submit_date")).getTime());
+                    pullRequest.setTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse((String) obj.get("submit_date")).getTime());
 
-                    pullRequest.setReviewers(reviewers);
+                    pullRequest.setReviewer(reviewers);
                     pullRequest.setSubProject(obj.getString("project"));
                     pullRequest.setProject(project);
                     pullRequest = pullRequestDAO.save(pullRequest);
@@ -208,7 +208,7 @@ public class DataLoader {
         saveChangeRequest(changeInfo, projectName, gerritBrowser, new HashSet<>(), new ArrayList<>(), null);
     }
 
-    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser, Set<Reviewer> specificCodeReviewers, List<String> paths, Long time) throws RestApiException {
+    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser, Set<Developer> specificCodeReviewers, List<String> paths, Long time) throws RestApiException {
         Project project = new Project();
         if (projectDAO.findOne(projectName) != null) {
             project = projectDAO.findOne(projectName);
@@ -222,31 +222,31 @@ public class DataLoader {
             return;
         }*/
 
-        Set<Reviewer> allReviewers = new HashSet<>();
+        Set<Developer> allReviewers = new HashSet<>();
         if (changeInfo.reviewers != null) {
             allReviewers = new HashSet<>();
             for (AccountInfo accountInfo : changeInfo.reviewers.values().iterator().next()) {
-                Reviewer reviewer = reviewerDAO.findOne(accountInfo._accountId);
+                Developer reviewer = reviewerDAO.findOne(accountInfo._accountId);
                 if (reviewer == null) {
-                    reviewer = new Reviewer(accountInfo);
+                    reviewer = new Developer(accountInfo);
                     reviewerDAO.save(reviewer);
                 }
                 allReviewers.add(reviewer);
             }
         }
 
-        Reviewer owner = reviewerDAO.findOne(changeInfo.owner._accountId);
+        Developer owner = reviewerDAO.findOne(changeInfo.owner._accountId);
         if (owner == null) {
-            owner = new Reviewer(changeInfo.owner);
+            owner = new Developer(changeInfo.owner);
             owner = reviewerDAO.save(owner);
         }
 
         PullRequest pullRequest = new PullRequest();
         pullRequest.setChangeId(changeInfo.changeId);
         if (time == null) {
-            pullRequest.setTime(changeInfo.created.getTime());
+            pullRequest.setTimestamp(changeInfo.created.getTime());
         } else {
-            pullRequest.setTime(time);
+            pullRequest.setTimestamp(time);
         }
 
         pullRequest.setProject(project);
@@ -260,7 +260,7 @@ public class DataLoader {
         pullRequest.setVerifiedReviewers(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getReviewers(changeInfo, "Verified")));
         pullRequest.setAllReviewers(allReviewers);
         pullRequest.setAllCommentators(getSetOfReviewersInDbFromCollectionOfAccountInfos(gerritBrowser.getCommentators(changeInfo)));*/
-        pullRequest.setReviewers(specificCodeReviewers);
+        pullRequest.setReviewer(specificCodeReviewers);
 
         pullRequest = pullRequestDAO.save(pullRequest);
 
@@ -273,15 +273,15 @@ public class DataLoader {
     }
 
     //fetch, save and return all reviewers specified in JSONObject
-    private Set<Reviewer> getSetOfReviewersFromJsonObject(JSONObject obj, GerritBrowser gerritBrowser) throws RestApiException {
+    private Set<Developer> getSetOfReviewersFromJsonObject(JSONObject obj, GerritBrowser gerritBrowser) throws RestApiException {
         JSONArray arr = obj.getJSONArray("approve_history");
-        Set<Reviewer> reviewers = new HashSet<>();
+        Set<Developer> reviewers = new HashSet<>();
         for (int i = 0; i < arr.length(); i++) {
             Integer reviewerId = ((Integer) ((JSONObject) arr.get(i)).get("userId"));
-            Reviewer reviewer = reviewerDAO.findOne(reviewerId);
+            Developer reviewer = reviewerDAO.findOne(reviewerId);
             if (reviewer == null) {
                 AccountInfo accountInfo = gerritBrowser.getAccount(reviewerId.toString());
-                Reviewer newReviewer = new Reviewer();
+                Developer newReviewer = new Developer();
                 newReviewer.setId(accountInfo._accountId);
                 newReviewer.setEmail(accountInfo.email);
                 newReviewer.setName(accountInfo.name);
@@ -296,13 +296,13 @@ public class DataLoader {
     }
 
     //fetch, save and return all reviewers specified in Collection<AccountInfo>
-    private Set<Reviewer> getSetOfReviewersInDbFromCollectionOfAccountInfos(Collection<AccountInfo> accountInfos) {
-        Set<Reviewer> result = new HashSet<>();
+    private Set<Developer> getSetOfReviewersInDbFromCollectionOfAccountInfos(Collection<AccountInfo> accountInfos) {
+        Set<Developer> result = new HashSet<>();
         for (AccountInfo accountInfo : accountInfos) {
             if (accountInfo != null) {
-                Reviewer reviewer = reviewerDAO.findOne(accountInfo._accountId);
+                Developer reviewer = reviewerDAO.findOne(accountInfo._accountId);
                 if (reviewer == null) {
-                    reviewer = reviewerDAO.save(new Reviewer(accountInfo));
+                    reviewer = reviewerDAO.save(new Developer(accountInfo));
                 }
                 result.add(reviewer);
             }

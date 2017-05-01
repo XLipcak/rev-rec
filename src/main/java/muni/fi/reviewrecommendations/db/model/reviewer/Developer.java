@@ -9,7 +9,7 @@ import javax.persistence.Id;
  * @author Jakub Lipcak, Masaryk University
  */
 @Entity
-public class Reviewer {
+public class Developer {
     @Id
     private Integer id;
 
@@ -17,10 +17,10 @@ public class Reviewer {
     private String name;
     private String avatar;
 
-    public Reviewer() {
+    public Developer() {
     }
 
-    public Reviewer(AccountInfo accountInfo) {
+    public Developer(AccountInfo accountInfo) {
         this.id = accountInfo._accountId;
         this.email = accountInfo.email;
         this.name = accountInfo.name;
@@ -29,7 +29,7 @@ public class Reviewer {
         }
     }
 
-    public Reviewer(String email, String name) {
+    public Developer(String email, String name) {
         this.email = email;
         this.name = name;
     }
@@ -71,7 +71,7 @@ public class Reviewer {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        Reviewer reviewer = (Reviewer) o;
+        Developer reviewer = (Developer) o;
 
         if (!id.equals(reviewer.id)) return false;
         if (email != null ? !email.equals(reviewer.email) : reviewer.email != null) return false;

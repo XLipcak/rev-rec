@@ -5,7 +5,7 @@ import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.reviewrecommendations.common.GerritBrowser;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequestService;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendationService;
 import muni.fi.reviewrecommendations.recommendationTechniques.revfinder.RevFinder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +33,7 @@ public class ReviewerController {
     private ReviewerRecommendationService reviewerRecommendationService;
 
     @RequestMapping(value = "/reviewer", method = RequestMethod.GET)
-    List<Reviewer> all(@RequestParam(value = "gerritChangeNumber", required = true) String gerritChangeNumber) throws IOException, RestApiException {
+    List<Developer> all(@RequestParam(value = "gerritChangeNumber", required = true) String gerritChangeNumber) throws IOException, RestApiException {
         GerritBrowser gerritBrowser = new GerritBrowser("https://android-review.googlesource.com");
         //GitBrowser gitBrowser = new GitBrowser("sdk", false);
         String projectName = "Android";

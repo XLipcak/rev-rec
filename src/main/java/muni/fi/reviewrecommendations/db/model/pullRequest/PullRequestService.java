@@ -1,6 +1,6 @@
 package muni.fi.reviewrecommendations.db.model.pullRequest;
 
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,11 +16,11 @@ public class PullRequestService {
     private PullRequestDAO pullRequestDAO;
 
     public List<PullRequest> findByTimeLessThanAndProjectName(Long time, String name) {
-        return pullRequestDAO.findByTimeLessThanAndProjectName(time, name);
+        return pullRequestDAO.findByTimestampLessThanAndProjectName(time, name);
     }
 
     public List<PullRequest> findByProjectNameOrderByTimeDesc(String projectName) {
-        return pullRequestDAO.findByProjectNameOrderByTimeDesc(projectName);
+        return pullRequestDAO.findByProjectNameOrderByTimestampDesc(projectName);
     }
 
     public List<PullRequest> findByChangeIdAndProjectName(String changeId, String name) {
@@ -31,8 +31,8 @@ public class PullRequestService {
         return pullRequestDAO.findByChangeNumber(changeNumber);
     }
 
-    public List<PullRequest> findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(Reviewer reviewer, Long time1, Long time2, String name) {
-        return pullRequestDAO.findByReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(reviewer, time1, time2, name);
+    public List<PullRequest> findByCodeReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(Developer reviewer, Long time1, Long time2, String name) {
+        return pullRequestDAO.findByReviewerAndTimestampLessThanAndTimestampGreaterThanAndProjectName(reviewer, time1, time2, name);
     }
 
     public List<PullRequest> findByProjectName(String name) {
@@ -40,7 +40,7 @@ public class PullRequestService {
     }
 
     public List<PullRequest> getAllPreviousReviews(Long changeTime, String projectName) {
-        return pullRequestDAO.findByTimeLessThanAndProjectName(changeTime, projectName);
+        return pullRequestDAO.findByTimestampLessThanAndProjectName(changeTime, projectName);
     }
 
     private String removeSlash(String filePath) {

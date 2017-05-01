@@ -1,7 +1,7 @@
 package muni.fi.reviewrecommendations.recommendationTechniques;
 
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 
 import java.util.Map;
 
@@ -23,6 +23,6 @@ public interface ReviewerRecommendation {
      * @param pullRequest PullRequest, for which we want to find appropriate code reviewers.
      * @return Sorted map of reviewers with points assigned to each of them by reviewer recommendation algorithms.
      */
-    Map<Reviewer, Double> recommend(PullRequest pullRequest);
+    Map<Developer, Double> recommend(PullRequest pullRequest);
 
 }

@@ -1,6 +1,6 @@
 package muni.fi.reviewrecommendations.db.model.pullRequest;
 
-import muni.fi.reviewrecommendations.db.model.reviewer.Reviewer;
+import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import org.springframework.data.repository.CrudRepository;
 
 import javax.transaction.Transactional;
@@ -12,27 +12,27 @@ import java.util.List;
 @Transactional
 public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
 
-    List<PullRequest> findByTimeLessThanAndProjectName(Long time, String name);
+    List<PullRequest> findByTimestampLessThanAndProjectName(Long timestamp, String name);
 
     List<PullRequest> findByChangeIdAndProjectName(String changeId, String name);
 
     List<PullRequest> findByChangeNumber(Integer changeNumber);
 
-    List<PullRequest> findByReviewersAndTimeLessThanAndTimeGreaterThanAndProjectName(Reviewer reviewer, Long time1, Long time2, String name);
+    List<PullRequest> findByReviewerAndTimestampLessThanAndTimestampGreaterThanAndProjectName(Developer reviewer, Long timestamp1, Long timestamp2, String name);
 
-    List<PullRequest> findByProjectNameAndTimeLessThan(String name, Long time1);
+    List<PullRequest> findByProjectNameAndTimestampLessThan(String name, Long timestamp);
 
     List<PullRequest> findByProjectName(String name);
 
-    List<PullRequest> findByProjectNameOrderByTimeDesc(String name);
+    List<PullRequest> findByProjectNameOrderByTimestampDesc(String name);
 
-    List<PullRequest> findByReviewersAndProjectNameAndTimeLessThan(Reviewer reviewer, String project, Long time1);
+    List<PullRequest> findByReviewerAndProjectNameAndTimestampLessThan(Developer reviewer, String project, Long timestamp);
 
-    List<PullRequest> findByProjectNameAndSubProjectAndReviewersAndTimeLessThan(String project, String subProject, Reviewer reviewer, Long time1);
+    List<PullRequest> findByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(String project, String subProject, Developer reviewer, Long timestamp);
 
-    List<PullRequest> findByProjectNameAndSubProjectAndTimeLessThan(String project, String subProject, Long time1);
+    List<PullRequest> findByProjectNameAndSubProjectAndTimestampLessThan(String project, String subProject, Long timestamp);
 
-    List<PullRequest> findByProjectNameAndReviewersAndTimeLessThan(String project, Reviewer reviewer, Long time1);
+    List<PullRequest> findByProjectNameAndReviewerAndTimestampLessThan(String project, Developer reviewer, Long time1);
 
-    List<PullRequest> findByProjectNameAndReviewersAndOwnerAndTimeLessThan(String project, Reviewer reviewer, Reviewer owner, Long time1);
+    List<PullRequest> findByProjectNameAndReviewerAndOwnerAndTimestampLessThan(String project, Developer reviewer, Developer owner, Long timestamp);
 }
