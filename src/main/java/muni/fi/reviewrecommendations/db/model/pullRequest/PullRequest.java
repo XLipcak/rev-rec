@@ -1,5 +1,6 @@
 package muni.fi.reviewrecommendations.db.model.pullRequest;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import muni.fi.reviewrecommendations.db.model.filePath.FilePath;
 import muni.fi.reviewrecommendations.db.model.project.Project;
 import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
@@ -17,6 +18,7 @@ import java.util.Set;
 @Entity
 public class PullRequest {
     @Id
+    @JsonIgnore
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 
@@ -133,9 +135,9 @@ public class PullRequest {
         this.filePaths = filePaths;
     }
 
-    public void setFilePaths(List<String> filePaths) {
+    /*public void setFilePaths(List<String> filePaths) {
         Set<FilePath> result = new HashSet<>();
         filePaths.forEach(x -> result.add(new FilePath(x)));
         this.filePaths = result;
-    }
+    }*/
 }

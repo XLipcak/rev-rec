@@ -1,5 +1,6 @@
 package muni.fi.reviewrecommendations.db;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.gerrit.extensions.common.AccountInfo;
 import com.google.gerrit.extensions.common.ChangeInfo;
@@ -24,10 +25,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -323,6 +321,13 @@ public class DataLoader {
             return "";
         }
         return commitFooter.get(0).getValue();
+    }
+
+    public List<PullRequest> fromFile(String filePath) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        List<PullRequest> pullRequests = mapper.readValue(new File(filePath), mapper.getTypeFactory().constructCollectionType(List.class, PullRequest.class));
+
+        return pullRequests;
     }
 
 }

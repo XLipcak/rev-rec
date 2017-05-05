@@ -9,26 +9,25 @@ import muni.fi.reviewrecommendations.db.model.reviewer.Developer;
 import muni.fi.reviewrecommendations.recommendationTechniques.ReviewerRecommendationService;
 import muni.fi.reviewrecommendations.recommendationTechniques.bayes.BayesRec;
 import muni.fi.reviewrecommendations.recommendationTechniques.revfinder.RevFinder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
- * This class is used to execute the functionality of the project.
+ * This class is used to execute the functionality of the project and will be always ran with the deploy of the application.
  *
  * @author Jakub Lipcak, Masaryk University
  */
 @Component
 public class InitialLoader implements CommandLineRunner {
 
+    private final Log logger = LogFactory.getLog(this.getClass());
 
     @Autowired
     private DataLoader dataLoader;
@@ -64,12 +63,26 @@ public class InitialLoader implements CommandLineRunner {
 
         //dataLoader.loadDataByChangeIdsFromFile("data/qt.json", gerritBrowser, "qt");
 
-        testTechniqueRevFinder(project);
+        testTechniqueRevFinder();
 
         //testTechniqueBayes(project);
+
+//        printData("");
+//        ObjectMapper mapper = new ObjectMapper();
+//        List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(project);
+//        mapper.writeValue(new File("openstack.json"), pullRequests);
+
+
+        System.out.println("XXX");
     }
 
-    private void testTechniqueRevFinder(String projectName) throws IOException, RestApiException {
+    /**
+     * Test RevFinder algorithm.
+     *
+     * @throws IOException
+     * @throws RestApiException
+     */
+    private void testTechniqueRevFinder() throws IOException, RestApiException {
 
         int top1Counter = 0;
         int top3Counter = 0;
@@ -78,16 +91,18 @@ public class InitialLoader implements CommandLineRunner {
         double mrrValue = 0;
 
         int iterationsCounter = 0;
-        List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(projectName);
+
+        List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(project);
         RevFinder revFinder = new RevFinder(pullRequests);
+
         for (PullRequest pullRequest : pullRequests) {
             iterationsCounter++;
-            if (revFinder.getAllPreviousReviews().size() == 1) {
+            if (revFinder.getAllPreviousReviews().size() < pullRequests.size() / 11) {
                 break;
             }
 
+            //remove actual pull request from the review list, what ensures that only previous reviews will be always used for the recommendation
             revFinder.setAllPreviousReviews(revFinder.getAllPreviousReviews().subList(1, revFinder.getAllPreviousReviews().size()));
-
 
             List<Developer> reviewers = reviewerRecommendationService.recommend(revFinder, pullRequest);
 
@@ -144,15 +159,9 @@ public class InitialLoader implements CommandLineRunner {
 
             printData("_____________________________________________");
         }
-
-        printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
     }
 
-    private void testTechniqueBayes(String projectName) throws IOException, RestApiException {
+    private void testTechniqueBayes() throws IOException, RestApiException {
 
         BayesRec reviewerRecommendation = bayesRec;
         int top1Counter = 0;
@@ -162,7 +171,7 @@ public class InitialLoader implements CommandLineRunner {
         double mrrValue = 0;
 
         int iterationsCounter = 0;
-        List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(projectName);
+        List<PullRequest> pullRequests = pullRequestService.findByProjectNameOrderByTimeDesc(project);
         int foldSize = pullRequests.size() / 11;
         int modelBuildCounter = 0;
 
@@ -238,75 +247,10 @@ public class InitialLoader implements CommandLineRunner {
             printData("iterationsCounter: " + iterationsCounter);
             printData("_____________________________________________");
         }
-
-        printData("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
-        printData("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
     }
 
-    Set<Developer> mergeReviewers(PullRequest pullRequest, Set<Developer> reviewersWithAtLeastOneReview) {
-        Set<Developer> result = new HashSet<>();
-
-        for (Developer reviewer : pullRequest.getReviewer()) {
-            if (reviewersWithAtLeastOneReview.contains(reviewer)) {
-                result.add(reviewer);
-            }
-        }
-
-        if (reviewersWithAtLeastOneReview.contains(pullRequest.getOwner())) {
-            result.add(pullRequest.getOwner());
-        }
-
-        return result;
-    }
-
-
-    private List<Developer> removeSelfReviewers(List<Developer> reviewersList, PullRequest pullRequest, Set<Developer> selfReviewers) {
-        List<Developer> result = new ArrayList<>();
-        for (Developer reviewer : reviewersList) {
-            if (pullRequest.getOwner().equals(reviewer) && !selfReviewers.contains(reviewer)) {
-                System.out.println("Self reviewer removed!");
-                //is recommended, but never did self review before
-            } else {
-                result.add(reviewer);
-            }
-        }
-        return result;
-    }
-
-    private Set<Developer> findSelfReviewers(String projectName) {
-        Set<Developer> result = new HashSet<>();
-        for (PullRequest pullRequest : pullRequestService.findByProjectName(projectName)) {
-            for (Developer reviewer : pullRequest.getReviewer()) {
-                if (pullRequest.getOwner().equals(reviewer)) {
-                    result.add(reviewer);
-                }
-            }
-        }
-        return result;
-    }
-
-    private String removeSlash(String filePath) {
-        String result = "";
-
-        for (int x = 0; x < filePath.length(); x++) {
-            if (filePath.charAt(x) != '/') {
-                result += filePath.charAt(x);
-            }
-        }
-        return result;
-    }
 
     private void printData(String text) {
-        try {
-            System.out.println(text);
-            FileWriter fw = new FileWriter("output/" + project + ".txt", true);
-            fw.write(text + "\n");
-            fw.close();
-        } catch (IOException ioe) {
-            System.err.println("IOException: " + ioe.getMessage());
-        }
+        logger.info(project + " " + text);
     }
 }

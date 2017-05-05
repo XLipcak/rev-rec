@@ -1,5 +1,6 @@
 package muni.fi.reviewrecommendations.db.model.filePath;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import muni.fi.reviewrecommendations.db.model.pullRequest.PullRequest;
 
 import javax.persistence.*;
@@ -11,10 +12,13 @@ import javax.persistence.*;
 @Table(name = "filepath")
 public class FilePath {
     @Id
+    @JsonIgnore
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
+
     private String location;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.EAGER)
     private PullRequest pullRequest;
 
