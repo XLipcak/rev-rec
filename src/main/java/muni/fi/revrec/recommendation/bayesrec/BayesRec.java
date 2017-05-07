@@ -6,6 +6,7 @@ import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.ReviewerRecommendation;
+import muni.fi.revrec.recommendation.ReviewerRecommendationBase;
 import org.eclipse.recommenders.jayes.BayesNet;
 import org.eclipse.recommenders.jayes.BayesNode;
 import org.eclipse.recommenders.jayes.inference.IBayesInferer;
@@ -16,7 +17,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of reviewer recommendation with the usage of Naive Bayes.
@@ -24,18 +24,13 @@ import java.util.stream.Collectors;
  * @author Jakub Lipcak, Masaryk University
  */
 @Service
-public class BayesRec implements ReviewerRecommendation {
+public class BayesRec extends ReviewerRecommendationBase implements ReviewerRecommendation {
 
-    private static final double MINIMAL_PERCENTAGE_VALUE = 0.01;
+    private static final double SMOOTHING_VARIABLE = 0.01;
 
-    @Autowired
-    private PullRequestDAO pullRequestDAO;
 
     @Autowired
     private FilePathDAO filePathDAO;
-
-    @Value("${recommendation.project}")
-    private String project;
 
     //Bayes network attributes
     private IBayesInferer inferer;
@@ -45,11 +40,17 @@ public class BayesRec implements ReviewerRecommendation {
     private BayesNode ownerNode;
 
     private List<Developer> allReviewers;
-    List<String> allFilePaths;
-    List<Developer> allOwners;
-    List<String> allSubProjects;
+    private List<String> allFilePaths;
+    private List<Developer> allOwners;
+    private List<String> allSubProjects;
 
-    public BayesRec() {
+    public BayesRec(@Autowired PullRequestDAO pullRequestDAO,
+                    @Autowired FilePathDAO filePathDAO,
+                    @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
+                    @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
+                    @Value("${recommendation.project}") String project) {
+        super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);
+        this.filePathDAO = filePathDAO;
     }
 
     @Override
@@ -62,7 +63,7 @@ public class BayesRec implements ReviewerRecommendation {
         allOwners = findAllOwners(timestamp);
         allReviewers = findAllCodeReviewers(timestamp);
         allSubProjects = findAllSubProjects(timestamp);
-        int index;
+        int index = 0;
 
         //Build Bayesian network
         BayesNet net = new BayesNet();
@@ -73,7 +74,6 @@ public class BayesRec implements ReviewerRecommendation {
         String reviewersOutcomes[] = new String[allReviewers.size()];
         double[] reviewersProbabilities = new double[allReviewers.size()];
         double allReviewersSize = (double) pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp).size();
-        index = 0;
         for (Developer reviewer : allReviewers) {
             reviewersOutcomes[index] = reviewer.getId().toString();
             reviewersProbabilities[index] = ((double) (pullRequestDAO.findByReviewerAndProjectNameAndTimestampLessThan(reviewer, project, timestamp).size()) / allReviewersSize);
@@ -102,7 +102,7 @@ public class BayesRec implements ReviewerRecommendation {
                         denumeratorSize);
                 index++;
             }
-            subProjectProbabilities = normaliseArray(index - subProjectsArray.length, index, subProjectProbabilities);
+            subProjectProbabilities = laplaceSmoothing(index - subProjectsArray.length, index, subProjectProbabilities);
         }
 
         subProjectNode.addOutcomes(subProjectOutcomes);
@@ -124,7 +124,7 @@ public class BayesRec implements ReviewerRecommendation {
                 index++;
                 System.out.println(index + "/" + filePathNodeProbabilities.length);
             }
-            filePathNodeProbabilities = normaliseArray(index - filePathNodeOutcomes.length, index, filePathNodeProbabilities);
+            filePathNodeProbabilities = laplaceSmoothing(index - filePathNodeOutcomes.length, index, filePathNodeProbabilities);
         }
         filePathNode.addOutcomes(filePathNodeOutcomes);
         filePathNode.setParents(Arrays.asList(reviewersNode));
@@ -148,7 +148,7 @@ public class BayesRec implements ReviewerRecommendation {
                         denumeratorSize;
                 index++;
             }
-            ownerNodeProbabilities = normaliseArray(index - allOwners.size(), index, ownerNodeProbabilities);
+            ownerNodeProbabilities = laplaceSmoothing(index - allOwners.size(), index, ownerNodeProbabilities);
         }
 
         ownerNode.addOutcomes(ownerNodeOutcomes);
@@ -161,7 +161,7 @@ public class BayesRec implements ReviewerRecommendation {
     }
 
     @Override
-    public Map<Developer, Double> recommend(PullRequest pullRequest) {
+    public List<Developer> recommend(PullRequest pullRequest) {
         Map<Developer, Double> result = new HashMap<>();
         for (FilePath x : pullRequest.getFilePaths()) {
             Map<Developer, Double> resultList = recommend(pullRequest, x.getLocation());
@@ -176,7 +176,7 @@ public class BayesRec implements ReviewerRecommendation {
                 y--;
             }
         }
-        return result;
+        return processResult(result, pullRequest);
     }
 
     private Map<Developer, Double> recommend(PullRequest pullRequest, String fileEnding) {
@@ -259,7 +259,7 @@ public class BayesRec implements ReviewerRecommendation {
         return new ArrayList<>(allSubProjects);
     }
 
-    private double[] normaliseArray(int beginIndex, int endIndex, double[] array) {
+    private double[] laplaceSmoothing(int beginIndex, int endIndex, double[] array) {
         int nonZeroElements = 0;
         int zeroElements = 0;
         for (int x = beginIndex; x < endIndex; x++) {
@@ -271,9 +271,9 @@ public class BayesRec implements ReviewerRecommendation {
         }
         for (int x = beginIndex; x < endIndex; x++) {
             if (array[x] > 0) {
-                array[x] = array[x] - (MINIMAL_PERCENTAGE_VALUE / nonZeroElements);
+                array[x] = array[x] - (SMOOTHING_VARIABLE / nonZeroElements);
             } else {
-                array[x] = array[x] + (MINIMAL_PERCENTAGE_VALUE / zeroElements);
+                array[x] = array[x] + (SMOOTHING_VARIABLE / zeroElements);
             }
         }
 
@@ -290,18 +290,5 @@ public class BayesRec implements ReviewerRecommendation {
         allFilePaths.add("otherFilePath");
 
         return new ArrayList<>(allFilePaths);
-    }
-
-
-    private <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
-        return map.entrySet()
-                .stream()
-                .sorted(Map.Entry.comparingByValue(Collections.reverseOrder()))
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
     }
 }

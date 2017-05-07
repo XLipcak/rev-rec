@@ -5,7 +5,6 @@ import muni.fi.revrec.common.DataLoader;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
-import muni.fi.revrec.recommendation.ReviewerRecommendationService;
 import muni.fi.revrec.recommendation.bayesrec.BayesRec;
 import muni.fi.revrec.recommendation.revfinder.RevFinder;
 import org.apache.commons.logging.Log;
@@ -35,11 +34,12 @@ public class InitialLoader implements CommandLineRunner {
     @Autowired
     private PullRequestDAO pullRequestDAO;
 
-    @Autowired
-    private ReviewerRecommendationService reviewerRecommendationService;
 
     @Autowired
     private BayesRec bayesRec;
+
+    @Autowired
+    private RevFinder revFinder;
 
     @Value("${recommendation.project}")
     private String project;
@@ -90,7 +90,6 @@ public class InitialLoader implements CommandLineRunner {
         int iterationsCounter = 0;
 
         List<PullRequest> pullRequests = pullRequestDAO.findByProjectNameOrderByTimestampDesc(project);
-        RevFinder revFinder = new RevFinder(pullRequests, false);
 
         for (PullRequest pullRequest : pullRequests) {
             iterationsCounter++;
@@ -101,7 +100,7 @@ public class InitialLoader implements CommandLineRunner {
             //remove actual pull request from the review list, what ensures that only previous reviews will be always used for the recommendation
             revFinder.setAllPreviousReviews(revFinder.getAllPreviousReviews().subList(1, revFinder.getAllPreviousReviews().size()));
 
-            List<Developer> reviewers = reviewerRecommendationService.recommend(revFinder, pullRequest);
+            List<Developer> reviewers = revFinder.recommend(pullRequest);
 
             printLine(iterationsCounter + " " + pullRequest.getChangeNumber());
 
@@ -173,9 +172,9 @@ public class InitialLoader implements CommandLineRunner {
             }
 
 
-            List<Developer> reviewers = reviewerRecommendationService.recommend(reviewerRecommendation, pullRequest);
-            //List<Developer> reviewers = reviewerRecommendationService.recommend(reviewerRecommendation, revFinder, review);
-            /*List<Developer> reviewers = removeSelfReviewers(removeRetiredReviewers(pullRequest, 31104000000l, reviewerRecommendationService.recommend(revFinder, review), projectName),
+            List<Developer> reviewers = reviewerRecommendation.recommend(pullRequest);
+            //List<Developer> reviewers = reviewerRecommendationService.processResult(reviewerRecommendation, revFinder, review);
+            /*List<Developer> reviewers = removeSelfReviewers(removeRetiredReviewers(pullRequest, 31104000000l, reviewerRecommendationService.processResult(revFinder, review), projectName),
                     pullRequest, findSelfReviewers(projectName)); //12 months*/
 
             iterationsCounter++;

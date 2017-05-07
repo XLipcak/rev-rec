@@ -2,29 +2,47 @@ package muni.fi.revrec.recommendation.revfinder;
 
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.pullRequest.PullRequest;
+import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.ReviewerRecommendation;
+import muni.fi.revrec.recommendation.ReviewerRecommendationBase;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of RevFinder algorithm: http://ieeexplore.ieee.org/document/7081824/
  *
  * @author Jakub Lipcak, Masaryk University
  */
-public class RevFinder implements ReviewerRecommendation {
+@Service
+public class RevFinder extends ReviewerRecommendationBase implements ReviewerRecommendation {
 
     private static final int LONGEST_COMMON_PREFIX = 0;
     private static final int LONGEST_COMMON_SUFFIX = 1;
     private static final int LONGEST_COMMON_SUBSTRING = 2;
     private static final int LONGEST_COMMON_SUBSEQUENCE = 3;
 
-    private boolean useSubProjectName = false;
+
+    private boolean useSubProjectName;
+
+
     private List<PullRequest> allPreviousReviews;
 
+    @Autowired
+    public RevFinder(@Autowired PullRequestDAO pullRequestDAO,
+                     @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
+                     @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
+                     @Value("${recommendation.project}") String project,
+                     @Value("${recommendation.revfinder.projectname}") boolean useSubProjectName) {
+        super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);
+        init(pullRequestDAO.findByProjectNameOrderByTimestampDesc(project), useSubProjectName);
+    }
 
-    public RevFinder(List<PullRequest> allPreviousReviews, boolean useSubProjectName) {
+
+    private void init(List<PullRequest> allPreviousReviews, boolean useSubProjectName) {
         if (useSubProjectName) {
             allPreviousReviews.forEach(this::modifyPullRequestFilePaths);
         }
@@ -37,7 +55,7 @@ public class RevFinder implements ReviewerRecommendation {
     }
 
     @Override
-    public Map<Developer, Double> recommend(PullRequest pullRequest) {
+    public List<Developer> recommend(PullRequest pullRequest) {
         if (useSubProjectName) {
             modifyPullRequestFilePaths(pullRequest);
         }
@@ -75,19 +93,7 @@ public class RevFinder implements ReviewerRecommendation {
             }
         }
 
-        return bordaCountCombination(reviewerCandidates);
-    }
-
-    private static <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
-        return map.entrySet()
-                .stream()
-                .sorted(Map.Entry.comparingByValue(Collections.reverseOrder()))
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
+        return processResult(bordaCountCombination(reviewerCandidates), pullRequest);
     }
 
     private Map<Developer, Double> bordaCountCombination(ArrayList<HashMap<Developer, Double>> reviewerCandidates) {

@@ -3,7 +3,7 @@ package muni.fi.revrec.recommendation;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.reviewer.Developer;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * ReviewerRecommendation interface prescribes methods, which should be implemented by code reviewer recommendation algorithms.
@@ -23,6 +23,6 @@ public interface ReviewerRecommendation {
      * @param pullRequest PullRequest, for which we want to find appropriate code reviewers.
      * @return Sorted map of reviewers with points assigned to each of them by reviewer recommendation algorithms.
      */
-    Map<Developer, Double> recommend(PullRequest pullRequest);
+    List<Developer> recommend(PullRequest pullRequest);
 
 }

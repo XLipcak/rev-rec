@@ -6,8 +6,10 @@ import muni.fi.revrec.common.GerritBrowser;
 import muni.fi.revrec.common.GitBrowser;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.pullRequest.PullRequest;
+import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.ReviewerRecommendation;
+import muni.fi.revrec.recommendation.ReviewerRecommendationBase;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.lib.ObjectId;
@@ -19,6 +21,9 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.util.RawParseUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
@@ -28,7 +33,8 @@ import java.util.*;
  *
  * @author Jakub Lipcak, Masaryk University
  */
-public class ReviewBot implements ReviewerRecommendation {
+@Service
+public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRecommendation {
 
     private static final int INITIAL_POINT = 1;
     private static final double CONSTANT_FACTOR = 0.9;
@@ -36,9 +42,16 @@ public class ReviewBot implements ReviewerRecommendation {
     private GitBrowser gitBrowser;
     private GerritBrowser gerritBrowser;
 
-    public ReviewBot(GitBrowser gitBrowser, GerritBrowser gerritBrowser) {
-        this.gitBrowser = gitBrowser;
-        this.gerritBrowser = gerritBrowser;
+
+    public ReviewBot(@Autowired PullRequestDAO pullRequestDAO,
+                     @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
+                     @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
+                     @Value("${recommendation.project}") String project) {
+        super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);
+
+        //TODO: init
+        this.gitBrowser = null;
+        this.gerritBrowser = null;
     }
 
     @Override
@@ -46,7 +59,7 @@ public class ReviewBot implements ReviewerRecommendation {
     }
 
     @Override
-    public Map<Developer, Double> recommend(PullRequest pullRequest) {
+    public List<Developer> recommend(PullRequest pullRequest) {
 
         Map<RevCommit, Double> resultMap = new HashMap<>();
         for (FilePath filePath : pullRequest.getFilePaths()) {
@@ -70,7 +83,7 @@ public class ReviewBot implements ReviewerRecommendation {
             }
         }
 
-        return propagateResultToUserPoints(resultMap);
+        return processResult(propagateResultToUserPoints(resultMap), pullRequest);
     }
 
 

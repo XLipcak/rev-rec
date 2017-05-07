@@ -8,6 +8,7 @@ import com.google.gerrit.extensions.restapi.RestApiException;
 import com.urswolfer.gerrit.client.rest.GerritAuthData;
 import com.urswolfer.gerrit.client.rest.GerritRestApiFactory;
 import com.urswolfer.gerrit.client.rest.http.HttpStatusException;
+import muni.fi.revrec.model.filePath.FilePath;
 
 import java.util.*;
 
@@ -91,15 +92,17 @@ public class GerritBrowser {
         return gerritApi.accounts().id(id).get();
     }
 
-    public List<String> getFilePaths(String changeId) throws RestApiException {
-        List<String> result = new ArrayList<>();
+    public List<FilePath> getFilePaths(String changeId) throws RestApiException {
+        List<FilePath> result = new ArrayList<>();
         Map<String, FileInfo> changeInfo = gerritApi.changes().id(changeId).revision("current").files();
 
         for (Map.Entry<String, FileInfo> entry : changeInfo.entrySet()) {
             if (!entry.getKey().equals("/COMMIT_MSG")) {
-                result.add(entry.getKey());
+                result.add(new FilePath(entry.getKey()));
             }
         }
+
+
         return result;
     }
 

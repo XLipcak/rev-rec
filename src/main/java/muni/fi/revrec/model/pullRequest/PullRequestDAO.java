@@ -35,4 +35,6 @@ public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
     List<PullRequest> findByProjectNameAndReviewerAndTimestampLessThan(String project, Developer reviewer, Long time1);
 
     List<PullRequest> findByProjectNameAndReviewerAndOwnerAndTimestampLessThan(String project, Developer reviewer, Developer owner, Long timestamp);
+
+    List<PullRequest> findAll();
 }

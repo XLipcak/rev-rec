@@ -3,51 +3,54 @@ package muni.fi.revrec.recommendation;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service class used to recommend code reviewers in this project. It post-processes the results returned by
+ * Service class used to processResult code reviewers in this project. It post-processes the results returned by
  * algorithms implementing ReviewerRecommendation interface and groups common functionality.
  *
  * @author Jakub Lipcak, Masaryk University
  */
+public abstract class ReviewerRecommendationBase {
 
-@Service
-public class ReviewerRecommendationService {
-
-    @Value("${recommendation.reviewer.retired}")
+    protected PullRequestDAO pullRequestDAO;
+    protected String project;
+    private boolean removeRetiredReviewers;
     private long timeRetiredInMonths;
 
-    @Value("${recommendation.project}")
-    private String project;
 
-    @Autowired
-    private PullRequestDAO pullRequestDAO;
+    public ReviewerRecommendationBase(PullRequestDAO pullRequestDAO, boolean removeRetiredReviewers, long timeRetiredInMonths, String project) {
+        this.pullRequestDAO = pullRequestDAO;
+        this.removeRetiredReviewers = removeRetiredReviewers;
+        this.timeRetiredInMonths = timeRetiredInMonths;
+        this.project = project;
+    }
 
-    /**
-     * @param reviewerRecommendation
-     * @param pullRequest
-     * @return
-     */
-    public List<Developer> recommend(ReviewerRecommendation reviewerRecommendation, PullRequest pullRequest) {
-        Map<Developer, Double> map = reviewerRecommendation.recommend(pullRequest);
+    protected List<Developer> processResult(Map<Developer, Double> map, PullRequest pullRequest) {
+
+        //sort reviewers into the list
         map = sortByValue(map);
         List<Developer> result = new ArrayList<>();
         for (Map.Entry<Developer, Double> entry : map.entrySet()) {
-            //System.out.println(entry.getKey().getName() + " => " + entry.getValue());
             result.add(entry.getKey());
         }
 
-        return processResult(result, pullRequest);
+        //remove retired reviewers
+        if (removeRetiredReviewers)
+            result = removeRetiredReviewers(result, pullRequest);
+
+        //print recommended reviewers
+        for (int x = 0; x < result.size(); x++) {
+            System.out.println((x + 1) + " " + result.get(x).getName());
+        }
+
+        return result;
     }
 
 
-    private <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
+    protected <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
         return map.entrySet()
                 .stream()
                 .sorted(Map.Entry.comparingByValue(Collections.reverseOrder()))
@@ -59,29 +62,20 @@ public class ReviewerRecommendationService {
                 ));
     }
 
-    private List<Developer> processResult(List<Developer> reviewList, PullRequest pullRequest) {
-        List<Developer> result = removeRetiredReviewers(reviewList, pullRequest);
-
-        for (int x = 0; x < result.size(); x++) {
-            System.out.println((x + 1) + " " + result.get(x).getName());
-        }
-        return result;
-    }
 
     private List<Developer> removeRetiredReviewers(List<Developer> reviewersList, PullRequest pullRequest) {
         long timeRetired = timeRetiredInMonths * 30 * 24 * 60 * 60 * 1000;
         List<Developer> result = new ArrayList<>();
         List<Developer> removedReviewers = new ArrayList<>();
         for (Developer reviewer : reviewersList) {
+
             if (pullRequestDAO.findByReviewerAndTimestampLessThanAndTimestampGreaterThanAndProjectName(reviewer, pullRequest.getTimestamp(), pullRequest.getTimestamp() - timeRetired, project).size() > 0) {
                 result.add(reviewer);
             } else {
                 removedReviewers.add(reviewer);
             }
         }
-        for (int x = 0; x < removedReviewers.size(); x++) {
-            result.add(removedReviewers.get(x));
-        }
+        result.addAll(removedReviewers);
         return result;
     }
 
