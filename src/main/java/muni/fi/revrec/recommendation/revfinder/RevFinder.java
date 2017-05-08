@@ -30,7 +30,7 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
 
     @Autowired
     public RevFinder(@Autowired PullRequestDAO pullRequestDAO,
-                     @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
+                     @Value("${recommendation.retired}") boolean removeRetiredReviewers,
                      @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
                      @Value("${recommendation.project}") String project,
                      @Value("${recommendation.revfinder.projectname}") boolean useSubProjectName) {

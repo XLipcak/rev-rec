@@ -44,7 +44,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     public ReviewBot(@Autowired PullRequestDAO pullRequestDAO,
                      @Autowired GitService gitService,
                      @Autowired GerritService gerritService,
-                     @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
+                     @Value("${recommendation.retired}") boolean removeRetiredReviewers,
                      @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
                      @Value("${recommendation.project}") String project) {
         super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);

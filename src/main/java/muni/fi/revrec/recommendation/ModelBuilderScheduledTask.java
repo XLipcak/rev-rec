@@ -4,6 +4,7 @@ import muni.fi.revrec.recommendation.bayesrec.BayesRec;
 import muni.fi.revrec.recommendation.revfinder.RevFinder;
 import muni.fi.revrec.recommendation.reviewbot.ReviewBot;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,7 +22,7 @@ public class ModelBuilderScheduledTask {
     @Autowired
     private BayesRec bayesRec;
 
-    //@Scheduled(fixedRateString = "${recommendation.jobs.buildModel.rate}")
+    @Scheduled(cron = "${recommendation.jobs.buildModel.cron}")
     public void buildModels() {
         revFinder.buildModel();
         reviewBot.buildModel();

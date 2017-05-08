@@ -49,7 +49,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
 
     public BayesRec(@Autowired PullRequestDAO pullRequestDAO,
                     @Autowired FilePathDAO filePathDAO,
-                    @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
+                    @Value("${recommendation.retired}") boolean removeRetiredReviewers,
                     @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
                     @Value("${recommendation.project}") String project) {
         super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);
