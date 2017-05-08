@@ -4,23 +4,19 @@ import com.google.gerrit.extensions.common.AccountInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.revrec.common.GerritBrowser;
 import muni.fi.revrec.common.GitBrowser;
+import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.ReviewerRecommendation;
 import muni.fi.revrec.recommendation.ReviewerRecommendationBase;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectLoader;
-import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.FooterLine;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
-import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.treewalk.filter.PathFilter;
-import org.eclipse.jgit.util.RawParseUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -42,16 +38,18 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     private GitBrowser gitBrowser;
     private GerritBrowser gerritBrowser;
 
+    private final Log logger = LogFactory.getLog(this.getClass());
+
 
     public ReviewBot(@Autowired PullRequestDAO pullRequestDAO,
+                     @Autowired GitBrowser gitBrowser,
+                     @Autowired GerritBrowser gerritBrowser,
                      @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
                      @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
                      @Value("${recommendation.project}") String project) {
         super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);
-
-        //TODO: init
-        this.gitBrowser = null;
-        this.gerritBrowser = null;
+        this.gitBrowser = gitBrowser;
+        this.gerritBrowser = gerritBrowser;
     }
 
     @Override
@@ -63,12 +61,12 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
         Map<RevCommit, Double> resultMap = new HashMap<>();
         for (FilePath filePath : pullRequest.getFilePaths()) {
-            List<CommitAndPathWrapper> fileCommitHistory = gitBrowser.getFileCommitHistory(filePath.getLocation());
+            List<CommitAndPathWrapper> fileCommitHistory = gitBrowser.getFileCommitHistory(filePath.getLocation(), pullRequest.getSubProject());
             if (fileCommitHistory.size() == 1) {
                 continue;
             }
-            Set<Integer> lines = getLinesAffectedByCommit(fileCommitHistory.get(0).getRevCommit(), fileCommitHistory.get(1).getRevCommit(), filePath.getLocation());
-            List<List<RevCommit>> lch = lineChangeHistory(filePath.getLocation(), lines, fileCommitHistory);
+            Set<Integer> lines = getLinesAffectedByCommit(fileCommitHistory.get(0).getRevCommit(), fileCommitHistory.get(1).getRevCommit(), filePath.getLocation(), pullRequest.getSubProject());
+            List<List<RevCommit>> lch = lineChangeHistory(filePath.getLocation(), lines, fileCommitHistory, pullRequest.getSubProject());
             for (int x = 0; x < lch.size(); x++) {
                 double points = getInitialPointForThisFile(filePath.getLocation());
                 for (int y = 0; y < lch.get(x).size(); y++) {
@@ -88,6 +86,8 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
 
     private Map<Developer, Double> propagateResultToUserPoints(Map<RevCommit, Double> pointsMap) {
+        Map<Developer, Double> result = new HashMap<>();
+
         Map<AccountInfo, Double> reviewerCandidates = new HashMap<>();
         Set<String> emails = new HashSet<>();
 
@@ -107,7 +107,6 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
             }
 
             //normalisation, to refactor later
-            Map<Developer, Double> result = new HashMap<>();
             for (String email : emails) {
                 double points = 0;
                 AccountInfo accountInfo = null;
@@ -119,11 +118,11 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                 }
                 result.put(new Developer(accountInfo.email, accountInfo.name), points);
             }
-            return result;
         } catch (RestApiException ex) {
-            //TODO: handle exception
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
-        return new HashMap<>();
+        return result;
     }
 
     private List<AccountInfo> getUserRelatedToCommit(RevCommit commit) throws RestApiException {
@@ -138,23 +137,21 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         return INITIAL_POINT;
     }
 
-    private List<List<RevCommit>> lineChangeHistory(String filePath, Set<Integer> lines, List<CommitAndPathWrapper> fileCommitHistory) {
+    private List<List<RevCommit>> lineChangeHistory(String filePath, Set<Integer> lines, List<CommitAndPathWrapper> fileCommitHistory, String subprojectName) {
         List<List<RevCommit>> result = new ArrayList<>();
 
         try {
-
-
             Integer[] linesArray = lines.toArray(new Integer[lines.size()]);
-            int[][] lineHistoryMatrix = generateLineHistoryMatrix(filePath, linesArray, fileCommitHistory);
-            boolean[][] trackingMatrix = generateTrackingMatrix(filePath, linesArray, fileCommitHistory, lineHistoryMatrix);
-            List<Set<Integer>> alreadyCheckedLines = new ArrayList<Set<Integer>>();
+            int[][] lineHistoryMatrix = generateLineHistoryMatrix(filePath, linesArray, fileCommitHistory, subprojectName);
+            boolean[][] trackingMatrix = generateTrackingMatrix(filePath, linesArray, fileCommitHistory, lineHistoryMatrix, subprojectName);
+            List<Set<Integer>> alreadyCheckedLines = new ArrayList<>();
             for (int x = 0; x < fileCommitHistory.size(); x++) {
                 alreadyCheckedLines.add(new HashSet<>());
             }
 
-            for (int x = 0; x < fileCommitHistory.size(); x++) {
-                System.out.println(getChangeIdFromFooter(fileCommitHistory.get(x).getRevCommit().getFooterLines()));
-            }
+            logger.debug("File change history: ");
+            fileCommitHistory.forEach(x -> logger.debug(getChangeIdFromFooter(x.getRevCommit().getFooterLines())));
+
             for (int index = 0; index < lines.size(); index++) {
                 List<RevCommit> resultForActualLine = new ArrayList<>();
                 for (int x = 1; x < fileCommitHistory.size(); x++) {
@@ -163,7 +160,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                     }
                     if (x == fileCommitHistory.size() - 1) {
                         resultForActualLine.add(fileCommitHistory.get(x).getRevCommit());
-                        System.out.println("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                        logger.debug("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                         break;
                     }
                     if (!fileCommitHistory.get(x).getPath().equals(fileCommitHistory.get(x).getPath())) {
@@ -175,52 +172,42 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
                     RevCommit headCommit = fileCommitHistory.get(x).getRevCommit();
                     RevCommit diffWith = fileCommitHistory.get(x + 1).getRevCommit();
-                    EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath());
+                    EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath(), subprojectName);
 
                     for (Edit edit : edits) {
                         if (edit.getType() == Edit.Type.REPLACE) {
-                            //int lineDifferenceInReplace = (edit.getEndA() - edit.getBeginA()) - (edit.getEndB() - edit.getBeginB());
                             if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
                                 resultForActualLine.add(headCommit);
-                                System.out.println("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.debug("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                             }
                         }
 
                         if (edit.getType() == Edit.Type.INSERT) {
-                            if (linesArray[index] + lineHistoryMatrix[index][x] >= edit.getBeginB() + 1 && linesArray[index] + lineHistoryMatrix[index][x] <= edit.getEndB())/*(edit.getEndA() + 1 == actualLine)*//*(edit.getBeginA() < actualLine && actualLine <= edit.getEndA() + (edit.getEndB() - edit.getEndA()))*/ {
-                            /*if (alreadyCheckedLines.get(x).contains(actualLine)) {
-                                continue;
-                            }*/
+                            if (linesArray[index] + lineHistoryMatrix[index][x] >= edit.getBeginB() + 1 && linesArray[index] + lineHistoryMatrix[index][x] <= edit.getEndB()) {
                                 alreadyCheckedLines.get(x).add(actualLine);
-
                                 resultForActualLine.add(headCommit);
-                                System.out.println("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.debug("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                             }
                         }
 
                         if (edit.getType() == Edit.Type.DELETE) {
                             if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
-                                //resultForActualLine.add(headCommit);
-                                System.out.println("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.debug("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                             }
                         }
                     }
-
-                    //logging
-            /*System.out.println("Head: " + headCommit.getShortMessage());
-            System.out.println("Diff with: " + diffWith.getShortMessage());
-            System.out.println(edits);*/
                 }
                 result.add(resultForActualLine);
             }
         } catch (IOException ex) {
-            //TODO: handle exception
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
 
         return result;
     }
 
-    private int[][] generateLineHistoryMatrix(String filePath, Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory) throws IOException {
+    private int[][] generateLineHistoryMatrix(String filePath, Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory, String subProjectName) throws IOException {
         int[][] lineHistoryMatrix = new int[linesArray.length][fileCommitHistory.size()];
         for (int y = 0; y < fileCommitHistory.size(); y++) {
             if (y == fileCommitHistory.size() - 1) {
@@ -233,17 +220,13 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
             RevCommit headCommit = fileCommitHistory.get(y).getRevCommit();
             RevCommit diffWith = fileCommitHistory.get(y + 1).getRevCommit();
-            EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath());
+            EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
             for (Edit edit : edits) {
                 if (edit.getType() == Edit.Type.INSERT) {
                     int amountOfInsertedLines = edit.getEndB() - edit.getBeginB();
-                    int insertedLinesCounter = 0;
                     for (int lines = 0; lines < linesArray.length; lines++) {
                         if (linesArray[lines] + lineHistoryMatrix[lines][y + 1] > edit.getBeginB() + 1) {
-                            /*if (insertedLinesCounter < amountOfInsertedLines) {
-                                insertedLinesCounter++;
-                            }*/
-                            lineHistoryMatrix[lines][y + 1] -= amountOfInsertedLines;//insertedLinesCounter;
+                            lineHistoryMatrix[lines][y + 1] -= amountOfInsertedLines;
                         }
                     }
                 }
@@ -277,7 +260,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         return lineHistoryMatrix;
     }
 
-    private boolean[][] generateTrackingMatrix(String filePath, Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory, int[][] lineHistoryMatrix) throws IOException {
+    private boolean[][] generateTrackingMatrix(String filePath, Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory, int[][] lineHistoryMatrix, String subProjectName) throws IOException {
         boolean[][] trackingMatrix = new boolean[linesArray.length][fileCommitHistory.size()];
         for (int y = 0; y < fileCommitHistory.size(); y++) {
             if (y == fileCommitHistory.size() - 1) {
@@ -291,7 +274,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
             RevCommit headCommit = fileCommitHistory.get(y).getRevCommit();
             RevCommit diffWith = fileCommitHistory.get(y + 1).getRevCommit();
 
-            EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath());
+            EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
             for (Edit edit : edits) {
 
                 if (edit.getType() == Edit.Type.INSERT) {
@@ -323,14 +306,14 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         return trackingMatrix;
     }
 
-    private Set<Integer> getLinesAffectedByCommit(RevCommit headCommit, RevCommit diffWith, String filePath) {
+    private Set<Integer> getLinesAffectedByCommit(RevCommit headCommit, RevCommit diffWith, String filePath, String subProjectName) {
+        Set<Integer> result = new LinkedHashSet<>();
         try {
-            Set<Integer> result = new LinkedHashSet<>();
-            EditList edits = gitBrowser.diff(headCommit, diffWith, filePath);
+            EditList edits = gitBrowser.diff(headCommit, diffWith, filePath, subProjectName);
 
             for (Edit edit : edits) {
                 if (edit.getType() == Edit.Type.INSERT) {
-                    result.add(getNearestLineOfCode(headCommit, filePath, edit.getBeginB() + 1));
+                    result.add(gitBrowser.getNearestLineOfCode(headCommit, filePath, edit.getBeginB() + 1, subProjectName));
                 }
                 if (edit.getType() == Edit.Type.DELETE) {
                     for (int x = edit.getBeginA() + 1; x <= edit.getEndA(); x++) {
@@ -343,70 +326,11 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                     }
                 }
             }
-            return result;
         } catch (IOException ex) {
-            //TODO: handle exception
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
-        return new HashSet<>();
-    }
-
-    private int getNearestLineOfCode(RevCommit headCommit, String filePath, int lineNumber) throws IOException {
-        //to be changed
-
-        String[] lines = null;
-        try {
-            Repository repository = gitBrowser.getRepository();
-            RevTree tree = headCommit.getTree();
-
-            // try to find a specific file
-            TreeWalk treeWalk = new TreeWalk(repository);
-            treeWalk.addTree(tree);
-            treeWalk.setRecursive(true);
-            treeWalk.setFilter(PathFilter.create(filePath));
-            ObjectId objectId = treeWalk.getObjectId(0);
-            ObjectLoader loader = repository.open(objectId);
-
-            // get its content and find nearest line longer than 1
-            byte[] contents = loader.getCachedBytes();
-            String file = RawParseUtils.decode(contents);
-            lines = file.split("\n");
-
-            //loader.copyTo(System.out);
-            for (int x = 1; x < lines.length; x++) {
-                if (lines[lineNumber - 1 - x].length() > 1 || (lines[lineNumber - 1 - x].length() == 1 && !Character.isWhitespace(lines[lineNumber - 1 - x].charAt(0)))) {
-                    return lineNumber - x;
-                }
-                if (lines[lineNumber - 1 + x].length() > 1 || (lines[lineNumber - 1 - x].length() == 1 && !Character.isWhitespace(lines[lineNumber - 1 - x].charAt(0)))) {
-                    return lineNumber + x;
-                }
-            }
-        } catch (Exception ex) {
-            System.out.println("Exception" + ex.getMessage());
-            System.out.println(lines);
-            return lineNumber - 1;
-        }
-
-        return lineNumber;
-    }
-
-    private int getFileLength(RevCommit headCommit, String filePath) throws IOException {
-        Repository repository = gitBrowser.getRepository();
-        RevTree tree = headCommit.getTree();
-
-        // try to find a specific file
-        TreeWalk treeWalk = new TreeWalk(repository);
-        treeWalk.addTree(tree);
-        treeWalk.setRecursive(true);
-        treeWalk.setFilter(PathFilter.create(filePath));
-        ObjectId objectId = treeWalk.getObjectId(0);
-        ObjectLoader loader = repository.open(objectId);
-
-        // get its content and find nearest line longer than 1
-        byte[] contents = loader.getCachedBytes();
-        String file = RawParseUtils.decode(contents);
-        String[] lines = file.split("\n");
-
-        return lines.length;
+        return result;
     }
 
     private String getChangeIdFromFooter(List<FooterLine> commitFooter) {

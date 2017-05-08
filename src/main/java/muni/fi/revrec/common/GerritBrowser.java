@@ -8,7 +8,14 @@ import com.google.gerrit.extensions.restapi.RestApiException;
 import com.urswolfer.gerrit.client.rest.GerritAuthData;
 import com.urswolfer.gerrit.client.rest.GerritRestApiFactory;
 import com.urswolfer.gerrit.client.rest.http.HttpStatusException;
+import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.model.filePath.FilePath;
+import muni.fi.revrec.model.project.ProjectDAO;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 
@@ -17,13 +24,16 @@ import java.util.*;
  *
  * @author Jakub Lipcak, Masaryk University
  */
+@Service
 public class GerritBrowser {
-    private String gerritPath;
-    private GerritApi gerritApi;
 
-    public GerritBrowser(String gerritPath) {
+    private GerritApi gerritApi;
+    private final Log logger = LogFactory.getLog(this.getClass());
+
+    public GerritBrowser(@Autowired ProjectDAO projectDAO,
+                         @Value("${recommendation.project}") String project) {
         GerritRestApiFactory gerritRestApiFactory = new GerritRestApiFactory();
-        GerritAuthData.Basic authData = new GerritAuthData.Basic(gerritPath);
+        GerritAuthData.Basic authData = new GerritAuthData.Basic(projectDAO.findOne(project).getGerritUrl());
         this.gerritApi = gerritRestApiFactory.create(authData);
     }
 
@@ -32,7 +42,8 @@ public class GerritBrowser {
         try {
             changeInfo = getChange(changeId);
         } catch (HttpStatusException ex) {
-            return new ArrayList<>();
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
         return getReviewers(changeInfo, label);
     }
@@ -55,11 +66,10 @@ public class GerritBrowser {
                 }
             }
 
-            return result;//changeInfo.reviewers.values().iterator().next();
-        } catch (NoSuchElementException ex) {
-            return new ArrayList<>();
-        } catch (IllegalArgumentException ex) {
-            return new ArrayList<>();
+            return result;
+        } catch (NoSuchElementException | IllegalArgumentException ex) {
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
     }
 
@@ -79,12 +89,8 @@ public class GerritBrowser {
         try {
             ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
             return changeInfo._number;
-        } catch (NoSuchElementException ex) {
-            return -1;
-        } catch (IllegalArgumentException ex) {
-            return -1;
-        } catch (HttpStatusException ex) {
-            return -1;
+        } catch (NoSuchElementException | IllegalArgumentException | HttpStatusException ex) {
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
     }
 

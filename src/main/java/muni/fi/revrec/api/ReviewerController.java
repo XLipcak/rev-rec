@@ -51,11 +51,13 @@ public class ReviewerController {
     @Autowired
     private BayesRec bayesRec;
 
-    @RequestMapping(value = "/reviewer", method = RequestMethod.GET)
+    @Autowired
+    private GerritBrowser gerritBrowser;
+
+    @RequestMapping(value = "/reviewers-recommendation", method = RequestMethod.GET)
     List<Developer> all(@RequestParam(value = "gerritChangeNumber", required = true) String gerritChangeNumber,
                         @RequestParam(value = "recommendationMethod", required = false) RecommendationMethod recommendationMethod) throws IOException, RestApiException {
         Project project = projectDAO.findOne(projectName);
-        GerritBrowser gerritBrowser = new GerritBrowser(project.getGerritUrl());
 
         PullRequest pullRequest = createPullRequest(gerritChangeNumber, gerritBrowser);
 

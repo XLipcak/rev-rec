@@ -1,7 +1,6 @@
 package muni.fi.revrec.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
 import com.google.gerrit.extensions.common.AccountInfo;
 import com.google.gerrit.extensions.common.ChangeInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
@@ -14,8 +13,6 @@ import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.model.reviewer.ReviewerDAO;
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.revwalk.FooterLine;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.json.JSONArray;
@@ -161,44 +158,6 @@ public class DataLoader {
         }
     }
 
-    /**
-     * Extract all previous pull requests from the information in GIT repository and store them in the database,
-     *
-     * @param gerritBrowser instance of Gerrit browser for chosen project
-     * @param gitBrowser    instance of Git browser for chosen project
-     * @param projectName   name of the project
-     * @throws GitAPIException
-     */
-    public void loadDataFromGit(GerritBrowser gerritBrowser, GitBrowser gitBrowser, String projectName) throws GitAPIException {
-        int counter = 0;
-        Git git = gitBrowser.getGit();
-
-        Iterable<RevCommit> commits = git.log().call();
-        List<RevCommit> commitsList = Lists.newArrayList(commits);
-
-        for (RevCommit commit : commitsList) {
-            try {
-                String changeId = getChangeIdFromFooter(commit.getFooterLines());
-                if (pullRequestDAO.findByChangeIdAndProjectName(changeId, projectName).size() > 0) {
-                    continue;
-                }
-
-                List<AccountInfo> accountInfos = getUserRelatedToCommit(commit, gerritBrowser);
-                System.out.println(counter + "   " + changeId + "   " + accountInfos.size());
-
-                if (accountInfos.isEmpty()) {
-                    continue;
-                }
-
-                ChangeInfo changeInfo = gerritBrowser.getChange(changeId);
-                saveChangeRequest(changeInfo, projectName, gerritBrowser);
-
-                counter++;
-            } catch (Exception ex) {
-                System.out.println(ex);
-            }
-        }
-    }
 
     private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser) throws RestApiException {
         saveChangeRequest(changeInfo, projectName, gerritBrowser, new HashSet<>(), new ArrayList<>(), null);

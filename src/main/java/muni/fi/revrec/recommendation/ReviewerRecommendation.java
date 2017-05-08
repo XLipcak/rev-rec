@@ -6,22 +6,23 @@ import muni.fi.revrec.model.reviewer.Developer;
 import java.util.List;
 
 /**
- * ReviewerRecommendation interface prescribes methods, which should be implemented by code reviewer recommendation algorithms.
+ * ReviewerRecommendation interface prescribes methods, which should be implemented by Code Reviewers Recommendation Algorithms.
  *
  * @author Jakub Lipcak, Masaryk University
  */
 public interface ReviewerRecommendation {
 
     /**
-     * Build model for the reviewer recommendation algorithm.
+     * Build model necessary to recommend reviewers by the algorithm.
      */
     void buildModel();
 
     /**
-     * Code reviewer recommendation algorithm. It returns the map of reviewers with scores recommended to review given PullRequest.
+     * Code Reviewers Recommendation Algorithm. It returns the list of recommended code reviewers sorted by their relevance.
+     * The most relevant candidate is at the index 0.
      *
      * @param pullRequest PullRequest, for which we want to find appropriate code reviewers.
-     * @return Sorted map of reviewers with points assigned to each of them by reviewer recommendation algorithms.
+     * @return Sorted list of recommended code reviewers.
      */
     List<Developer> recommend(PullRequest pullRequest);
 

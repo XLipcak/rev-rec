@@ -8,8 +8,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service class used to processResult code reviewers in this project. It post-processes the results returned by
- * algorithms implementing ReviewerRecommendation interface and groups common functionality.
+ * Base abstract class containing methods, which are useful for all Code Reviewers Recommendation Algorithms.
  *
  * @author Jakub Lipcak, Masaryk University
  */

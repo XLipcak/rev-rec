@@ -7,6 +7,8 @@ import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.ReviewerRecommendation;
 import muni.fi.revrec.recommendation.ReviewerRecommendationBase;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.eclipse.recommenders.jayes.BayesNet;
 import org.eclipse.recommenders.jayes.BayesNode;
 import org.eclipse.recommenders.jayes.inference.IBayesInferer;
@@ -27,7 +29,7 @@ import java.util.*;
 public class BayesRec extends ReviewerRecommendationBase implements ReviewerRecommendation {
 
     private static final double SMOOTHING_VARIABLE = 0.01;
-
+    private final Log logger = LogFactory.getLog(this.getClass());
 
     @Autowired
     private FilePathDAO filePathDAO;
@@ -59,6 +61,8 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
     }
 
     public void buildModel(Long timestamp) {
+        logger.info("Building probabilistic model...");
+
         allFilePaths = findAllFilePaths(timestamp);
         allOwners = findAllOwners(timestamp);
         allReviewers = findAllCodeReviewers(timestamp);
@@ -70,6 +74,8 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
 
 
         //Reviewers node
+        logger.info("Computing probabilities of reviewers...");
+
         reviewersNode = net.createNode("reviewersNode");
         String reviewersOutcomes[] = new String[allReviewers.size()];
         double[] reviewersProbabilities = new double[allReviewers.size()];
@@ -78,12 +84,14 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
             reviewersOutcomes[index] = reviewer.getId().toString();
             reviewersProbabilities[index] = ((double) (pullRequestDAO.findByReviewerAndProjectNameAndTimestampLessThan(reviewer, project, timestamp).size()) / allReviewersSize);
             index++;
-            //System.out.println(index);
+            logger.info(index + "/" + reviewersProbabilities.length);
         }
         reviewersNode.addOutcomes(reviewersOutcomes);
         reviewersNode.setProbabilities(reviewersProbabilities);
 
         //Subproject node
+        logger.info("Computing probabilities of subprojects...");
+
         subProjectNode = net.createNode("subProjectNode");
         String subProjectOutcomes[] = new String[allSubProjects.size()];
         double[] subProjectProbabilities = new double[allReviewers.size() * allSubProjects.size()];
@@ -101,6 +109,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
                 subProjectProbabilities[index] = ((double) pullRequestDAO.findByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(project, subProject, reviewer, timestamp).size() /
                         denumeratorSize);
                 index++;
+                logger.info(index + "/" + subProjectProbabilities.length);
             }
             subProjectProbabilities = laplaceSmoothing(index - subProjectsArray.length, index, subProjectProbabilities);
         }
@@ -111,6 +120,8 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
 
 
         //File path node
+        logger.info("Computing probabilities of file paths...");
+
         filePathNode = net.createNode("filePathNode");
         String[] filePathNodeOutcomes = allFilePaths.toArray(new String[allFilePaths.size()]);
         double[] filePathNodeProbabilities = new double[allReviewers.size() * allFilePaths.size()];
@@ -122,7 +133,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
                         filePathDAO.findByPullRequestProjectNameAndLocationAndPullRequestReviewerAndPullRequestTimestampLessThan(project,
                                 filePath, reviewer, timestamp).size() / denumeratorSize;
                 index++;
-                System.out.println(index + "/" + filePathNodeProbabilities.length);
+                logger.info(index + "/" + filePathNodeProbabilities.length);
             }
             filePathNodeProbabilities = laplaceSmoothing(index - filePathNodeOutcomes.length, index, filePathNodeProbabilities);
         }
@@ -132,6 +143,8 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
 
 
         //Owner node
+        logger.info("Computing probabilities of pull request owners...");
+
         ownerNode = net.createNode("ownerNode");
         String[] ownerNodeOutcomes = new String[allOwners.size()];
         int ownerIndex = 0;
@@ -147,6 +160,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
                 ownerNodeProbabilities[index] = (double) pullRequestDAO.findByProjectNameAndReviewerAndOwnerAndTimestampLessThan(project, reviewer, owner, timestamp).size() /
                         denumeratorSize;
                 index++;
+                logger.info(index + "/" + ownerNodeProbabilities.length);
             }
             ownerNodeProbabilities = laplaceSmoothing(index - allOwners.size(), index, ownerNodeProbabilities);
         }
@@ -179,7 +193,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         return processResult(result, pullRequest);
     }
 
-    private Map<Developer, Double> recommend(PullRequest pullRequest, String fileEnding) {
+    private Map<Developer, Double> recommend(PullRequest pullRequest, String filePathLocation) {
         Map<Developer, Double> result = new HashMap<>();
 
         Map<BayesNode, String> evidence = new HashMap<BayesNode, String>();
@@ -191,8 +205,8 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
             evidence.put(subProjectNode, "otherSubProject");
         }
 
-        if (new HashSet<>(allFilePaths).contains(fileEnding)) {
-            evidence.put(filePathNode, fileEnding);
+        if (new HashSet<>(allFilePaths).contains(filePathLocation)) {
+            evidence.put(filePathNode, filePathLocation);
         } else {
             System.out.println("Bayes otherFilePath");
             evidence.put(filePathNode, "otherFilePath");
@@ -216,7 +230,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
 
             return result;
         } catch (NumericalInstabilityException ex) {
-            System.out.println(ex.getMessage());
+            logger.error(ex.getMessage());
             return result;
         }
     }

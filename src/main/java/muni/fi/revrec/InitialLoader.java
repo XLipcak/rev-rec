@@ -62,7 +62,7 @@ public class InitialLoader implements CommandLineRunner {
 
         //testTechniqueRevFinder();
 
-        //testTechniqueBayes(project);
+        testTechniqueBayes();
 
 //        printLine("");
 //        ObjectMapper mapper = new ObjectMapper();

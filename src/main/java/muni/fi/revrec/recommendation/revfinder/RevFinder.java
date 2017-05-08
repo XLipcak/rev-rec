@@ -25,10 +25,7 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
     private static final int LONGEST_COMMON_SUBSTRING = 2;
     private static final int LONGEST_COMMON_SUBSEQUENCE = 3;
 
-
     private boolean useSubProjectName;
-
-
     private List<PullRequest> allPreviousReviews;
 
     @Autowired
