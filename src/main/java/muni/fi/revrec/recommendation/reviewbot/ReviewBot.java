@@ -2,8 +2,8 @@ package muni.fi.revrec.recommendation.reviewbot;
 
 import com.google.gerrit.extensions.common.AccountInfo;
 import com.google.gerrit.extensions.restapi.RestApiException;
-import muni.fi.revrec.common.GerritBrowser;
-import muni.fi.revrec.common.GitBrowser;
+import muni.fi.revrec.common.GerritService;
+import muni.fi.revrec.common.GitService;
 import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.pullRequest.PullRequest;
@@ -35,21 +35,21 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     private static final int INITIAL_POINT = 1;
     private static final double CONSTANT_FACTOR = 0.9;
 
-    private GitBrowser gitBrowser;
-    private GerritBrowser gerritBrowser;
+    private GitService gitService;
+    private GerritService gerritService;
 
     private final Log logger = LogFactory.getLog(this.getClass());
 
 
     public ReviewBot(@Autowired PullRequestDAO pullRequestDAO,
-                     @Autowired GitBrowser gitBrowser,
-                     @Autowired GerritBrowser gerritBrowser,
+                     @Autowired GitService gitService,
+                     @Autowired GerritService gerritService,
                      @Value("${recommendation.retired.remove}") boolean removeRetiredReviewers,
                      @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
                      @Value("${recommendation.project}") String project) {
         super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);
-        this.gitBrowser = gitBrowser;
-        this.gerritBrowser = gerritBrowser;
+        this.gitService = gitService;
+        this.gerritService = gerritService;
     }
 
     @Override
@@ -61,7 +61,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
         Map<RevCommit, Double> resultMap = new HashMap<>();
         for (FilePath filePath : pullRequest.getFilePaths()) {
-            List<CommitAndPathWrapper> fileCommitHistory = gitBrowser.getFileCommitHistory(filePath.getLocation(), pullRequest.getSubProject());
+            List<CommitAndPathWrapper> fileCommitHistory = gitService.getFileCommitHistory(filePath.getLocation(), pullRequest.getSubProject());
             if (fileCommitHistory.size() == 1) {
                 continue;
             }
@@ -130,7 +130,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         if (changeId.equals("")) {
             return new ArrayList<>();
         }
-        return (List<AccountInfo>) gerritBrowser.getReviewers(changeId, "Code-Review");
+        return (List<AccountInfo>) gerritService.getReviewers(changeId, "Code-Review");
     }
 
     private int getInitialPointForThisFile(String filePath) {
@@ -172,7 +172,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
                     RevCommit headCommit = fileCommitHistory.get(x).getRevCommit();
                     RevCommit diffWith = fileCommitHistory.get(x + 1).getRevCommit();
-                    EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath(), subprojectName);
+                    EditList edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath(), subprojectName);
 
                     for (Edit edit : edits) {
                         if (edit.getType() == Edit.Type.REPLACE) {
@@ -220,7 +220,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
             RevCommit headCommit = fileCommitHistory.get(y).getRevCommit();
             RevCommit diffWith = fileCommitHistory.get(y + 1).getRevCommit();
-            EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
+            EditList edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
             for (Edit edit : edits) {
                 if (edit.getType() == Edit.Type.INSERT) {
                     int amountOfInsertedLines = edit.getEndB() - edit.getBeginB();
@@ -274,7 +274,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
             RevCommit headCommit = fileCommitHistory.get(y).getRevCommit();
             RevCommit diffWith = fileCommitHistory.get(y + 1).getRevCommit();
 
-            EditList edits = gitBrowser.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
+            EditList edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
             for (Edit edit : edits) {
 
                 if (edit.getType() == Edit.Type.INSERT) {
@@ -309,11 +309,11 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     private Set<Integer> getLinesAffectedByCommit(RevCommit headCommit, RevCommit diffWith, String filePath, String subProjectName) {
         Set<Integer> result = new LinkedHashSet<>();
         try {
-            EditList edits = gitBrowser.diff(headCommit, diffWith, filePath, subProjectName);
+            EditList edits = gitService.diff(headCommit, diffWith, filePath, subProjectName);
 
             for (Edit edit : edits) {
                 if (edit.getType() == Edit.Type.INSERT) {
-                    result.add(gitBrowser.getNearestLineOfCode(headCommit, filePath, edit.getBeginB() + 1, subProjectName));
+                    result.add(gitService.getNearestLineOfCode(headCommit, filePath, edit.getBeginB() + 1, subProjectName));
                 }
                 if (edit.getType() == Edit.Type.DELETE) {
                     for (int x = edit.getBeginA() + 1; x <= edit.getEndA(); x++) {

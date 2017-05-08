@@ -48,12 +48,12 @@ public class DataLoader {
      * Extract data from JSON file and store them in the database. Only information about reviewers is fetched from Gerrit.
      *
      * @param fileLocation  location of JSON file
-     * @param gerritBrowser instance of Gerrit browser for chosen project
+     * @param gerritService instance of Gerrit browser for chosen project
      * @param projectName   name of the project
      * @throws RestApiException
      * @throws ParseException
      */
-    public void loadDataFromFile(String fileLocation, GerritBrowser gerritBrowser, String projectName) throws RestApiException, ParseException {
+    public void loadDataFromFile(String fileLocation, GerritService gerritService, String projectName) throws RestApiException, ParseException {
         try (BufferedReader br = new BufferedReader(new FileReader(fileLocation))) {
             StringBuilder sb = new StringBuilder();
             String line = br.readLine();
@@ -79,7 +79,7 @@ public class DataLoader {
                     System.out.println(x);
                     JSONObject obj = new JSONObject(line);
 
-                    Set<Developer> reviewers = getSetOfReviewersFromJsonObject(obj, gerritBrowser);
+                    Set<Developer> reviewers = getSetOfReviewersFromJsonObject(obj, gerritService);
 
                     PullRequest pullRequest = new PullRequest();
                     pullRequest.setChangeId(Integer.toString((Integer) obj.get("changeId")));
@@ -111,12 +111,12 @@ public class DataLoader {
      * Extract change IDs from JSON file and fetch all information about these change requests from Gerrit.
      *
      * @param fileLocation  location of JSON file
-     * @param gerritBrowser instance of Gerrit browser for chosen project
+     * @param gerritService instance of Gerrit browser for chosen project
      * @param projectName   name of the project
      * @throws RestApiException
      * @throws ParseException
      */
-    public void loadDataByChangeIdsFromFile(String fileLocation, GerritBrowser gerritBrowser, String projectName) throws RestApiException, ParseException {
+    public void loadDataByChangeIdsFromFile(String fileLocation, GerritService gerritService, String projectName) throws RestApiException, ParseException {
         try (BufferedReader br = new BufferedReader(new FileReader(fileLocation))) {
             StringBuilder sb = new StringBuilder();
             String line = br.readLine();
@@ -136,14 +136,14 @@ public class DataLoader {
                             System.out.println(x);
                             JSONObject obj = new JSONObject(line);
                             String changeId = Integer.toString((Integer) obj.get("changeId"));
-                            ChangeInfo changeInfo = gerritBrowser.getChange(changeId);
+                            ChangeInfo changeInfo = gerritService.getChange(changeId);
                             List<String> paths = new ArrayList<>();
                             JSONArray arr = ((JSONArray) obj.get("files"));
                             for (int i = 0; i < arr.length(); i++) {
                                 paths.add(arr.getString(i));
                             }
                             Long timeCreated = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse((String) obj.get("submit_date")).getTime();
-                            saveChangeRequest(changeInfo, projectName, gerritBrowser, getSetOfReviewersFromJsonObject(obj, gerritBrowser), paths, timeCreated);
+                            saveChangeRequest(changeInfo, projectName, gerritService, getSetOfReviewersFromJsonObject(obj, gerritService), paths, timeCreated);
                         } catch (HttpStatusException | IndexOutOfBoundsException ex) {
                             System.out.println(x);
                             System.out.println(ex);
@@ -159,11 +159,11 @@ public class DataLoader {
     }
 
 
-    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser) throws RestApiException {
-        saveChangeRequest(changeInfo, projectName, gerritBrowser, new HashSet<>(), new ArrayList<>(), null);
+    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritService gerritService) throws RestApiException {
+        saveChangeRequest(changeInfo, projectName, gerritService, new HashSet<>(), new ArrayList<>(), null);
     }
 
-    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritBrowser gerritBrowser, Set<Developer> specificCodeReviewers, List<String> paths, Long time) throws RestApiException {
+    private void saveChangeRequest(ChangeInfo changeInfo, String projectName, GerritService gerritService, Set<Developer> specificCodeReviewers, List<String> paths, Long time) throws RestApiException {
         Project project = new Project();
         if (projectDAO.findOne(projectName) != null) {
             project = projectDAO.findOne(projectName);
@@ -228,14 +228,14 @@ public class DataLoader {
     }
 
     //fetch, save and return all reviewers specified in JSONObject
-    private Set<Developer> getSetOfReviewersFromJsonObject(JSONObject obj, GerritBrowser gerritBrowser) throws RestApiException {
+    private Set<Developer> getSetOfReviewersFromJsonObject(JSONObject obj, GerritService gerritService) throws RestApiException {
         JSONArray arr = obj.getJSONArray("approve_history");
         Set<Developer> reviewers = new HashSet<>();
         for (int i = 0; i < arr.length(); i++) {
             Integer reviewerId = ((Integer) ((JSONObject) arr.get(i)).get("userId"));
             Developer reviewer = reviewerDAO.findOne(reviewerId);
             if (reviewer == null) {
-                AccountInfo accountInfo = gerritBrowser.getAccount(reviewerId.toString());
+                AccountInfo accountInfo = gerritService.getAccount(reviewerId.toString());
                 Developer newReviewer = new Developer();
                 newReviewer.setId(accountInfo._accountId);
                 newReviewer.setEmail(accountInfo.email);
@@ -265,12 +265,12 @@ public class DataLoader {
         return result;
     }
 
-    private List<AccountInfo> getUserRelatedToCommit(RevCommit commit, GerritBrowser gerritBrowser) throws RestApiException {
+    private List<AccountInfo> getUserRelatedToCommit(RevCommit commit, GerritService gerritService) throws RestApiException {
         String changeId = getChangeIdFromFooter(commit.getFooterLines());
         if (changeId.equals("")) {
             return new ArrayList<>();
         }
-        return (List<AccountInfo>) gerritBrowser.getReviewers(changeId, "Code-Review");
+        return (List<AccountInfo>) gerritService.getReviewers(changeId, "Code-Review");
     }
 
     private String getChangeIdFromFooter(List<FooterLine> commitFooter) {

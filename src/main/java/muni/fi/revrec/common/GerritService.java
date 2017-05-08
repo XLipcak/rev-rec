@@ -11,6 +11,7 @@ import com.urswolfer.gerrit.client.rest.http.HttpStatusException;
 import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.project.ProjectDAO;
+import muni.fi.revrec.model.pullRequest.PullRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +26,12 @@ import java.util.*;
  * @author Jakub Lipcak, Masaryk University
  */
 @Service
-public class GerritBrowser {
+public class GerritService {
 
     private GerritApi gerritApi;
     private final Log logger = LogFactory.getLog(this.getClass());
 
-    public GerritBrowser(@Autowired ProjectDAO projectDAO,
+    public GerritService(@Autowired ProjectDAO projectDAO,
                          @Value("${recommendation.project}") String project) {
         GerritRestApiFactory gerritRestApiFactory = new GerritRestApiFactory();
         GerritAuthData.Basic authData = new GerritAuthData.Basic(projectDAO.findOne(project).getGerritUrl());
@@ -123,5 +124,19 @@ public class GerritBrowser {
         Changes.QueryRequest queryRequest = gerritApi.changes().query();
         queryRequest = queryRequest.withStart(start);
         return queryRequest.get();
+    }
+
+    public PullRequest getPullRequest(String gerritChangeNumber) {
+        try {
+            ChangeInfo changeInfo = getChange(gerritChangeNumber);
+            PullRequest pullRequest = new PullRequest();
+            pullRequest.setTimestamp(changeInfo.created.getTime());
+            Set<FilePath> result = new HashSet<>(getFilePaths(gerritChangeNumber));
+            pullRequest.setFilePaths(result);
+
+            return pullRequest;
+        } catch (RestApiException ex) {
+            throw new ReviewerRecommendationException(ex.getMessage());
+        }
     }
 }

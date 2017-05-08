@@ -35,7 +35,7 @@ import java.util.List;
  * @author Jakub Lipcak, Masaryk University
  */
 @Service
-public class GitBrowser {
+public class GitService {
 
     private boolean FOLLOW_MERGED_COMMITS = false;
 
@@ -44,7 +44,7 @@ public class GitBrowser {
     private final Log logger = LogFactory.getLog(this.getClass());
 
 
-    public GitBrowser(@Value("${recommendation.project}") String project) throws IOException {
+    public GitService(@Value("${recommendation.project}") String project) throws IOException {
         this.projectRepositoryPath = "repos/" + project;
     }
 

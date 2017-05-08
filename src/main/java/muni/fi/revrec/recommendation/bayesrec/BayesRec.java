@@ -1,5 +1,6 @@
 package muni.fi.revrec.recommendation.bayesrec;
 
+import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.filePath.FilePathDAO;
 import muni.fi.revrec.model.pullRequest.PullRequest;
@@ -76,7 +77,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         //Reviewers node
         logger.info("Computing probabilities of reviewers...");
 
-        reviewersNode = net.createNode("reviewersNode");
+        BayesNode reviewersNode = net.createNode("reviewersNode");
         String reviewersOutcomes[] = new String[allReviewers.size()];
         double[] reviewersProbabilities = new double[allReviewers.size()];
         double allReviewersSize = (double) pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp).size();
@@ -92,7 +93,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         //Subproject node
         logger.info("Computing probabilities of subprojects...");
 
-        subProjectNode = net.createNode("subProjectNode");
+        BayesNode subProjectNode = net.createNode("subProjectNode");
         String subProjectOutcomes[] = new String[allSubProjects.size()];
         double[] subProjectProbabilities = new double[allReviewers.size() * allSubProjects.size()];
         String[] subProjectsArray = allSubProjects.toArray(new String[allSubProjects.size()]);
@@ -122,7 +123,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         //File path node
         logger.info("Computing probabilities of file paths...");
 
-        filePathNode = net.createNode("filePathNode");
+        BayesNode filePathNode = net.createNode("filePathNode");
         String[] filePathNodeOutcomes = allFilePaths.toArray(new String[allFilePaths.size()]);
         double[] filePathNodeProbabilities = new double[allReviewers.size() * allFilePaths.size()];
         index = 0;
@@ -145,7 +146,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         //Owner node
         logger.info("Computing probabilities of pull request owners...");
 
-        ownerNode = net.createNode("ownerNode");
+        BayesNode ownerNode = net.createNode("ownerNode");
         String[] ownerNodeOutcomes = new String[allOwners.size()];
         int ownerIndex = 0;
         for (Developer owner : allOwners) {
@@ -172,10 +173,18 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
 
         inferer = new JunctionTreeAlgorithm();
         inferer.setNetwork(net);
+        this.reviewersNode = reviewersNode;
+        this.subProjectNode = subProjectNode;
+        this.filePathNode = filePathNode;
+        this.ownerNode = ownerNode;
     }
 
     @Override
     public List<Developer> recommend(PullRequest pullRequest) {
+        if (inferer == null) {
+            throw new ReviewerRecommendationException("Model is not built yet!");
+        }
+
         Map<Developer, Double> result = new HashMap<>();
         for (FilePath x : pullRequest.getFilePaths()) {
             Map<Developer, Double> resultList = recommend(pullRequest, x.getLocation());
