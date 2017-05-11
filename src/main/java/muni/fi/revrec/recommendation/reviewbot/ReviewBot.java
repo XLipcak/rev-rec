@@ -38,8 +38,6 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     private GitService gitService;
     private GerritService gerritService;
 
-    private final Log logger = LogFactory.getLog(this.getClass());
-
 
     public ReviewBot(@Autowired PullRequestDAO pullRequestDAO,
                      @Autowired GitService gitService,

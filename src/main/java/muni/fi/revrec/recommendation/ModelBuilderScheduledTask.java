@@ -8,6 +8,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
+ * ModelBuilderScheduledTask class is used to schedule
+ * tasks related to models of reviewers recommendation systems.
+ *
  * @author Jakub Lipcak, Masaryk University
  */
 @Component
@@ -22,6 +25,9 @@ public class ModelBuilderScheduledTask {
     @Autowired
     private BayesRec bayesRec;
 
+    /**
+     * Build models of reviewers recommendation systems.
+     */
     @Scheduled(cron = "${recommendation.jobs.buildModel.cron}")
     public void buildModels() {
         revFinder.buildModel();

@@ -3,6 +3,8 @@ package muni.fi.revrec.recommendation;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -18,6 +20,7 @@ public abstract class ReviewerRecommendationBase {
     protected String project;
     private boolean removeRetiredReviewers;
     private long timeRetiredInMonths;
+    protected final Log logger = LogFactory.getLog(this.getClass());
 
 
     public ReviewerRecommendationBase(PullRequestDAO pullRequestDAO, boolean removeRetiredReviewers, long timeRetiredInMonths, String project) {
@@ -27,6 +30,12 @@ public abstract class ReviewerRecommendationBase {
         this.project = project;
     }
 
+    /**
+     * 
+     * @param map
+     * @param pullRequest
+     * @return
+     */
     protected List<Developer> processResult(Map<Developer, Double> map, PullRequest pullRequest) {
 
         //sort reviewers into the list
@@ -36,33 +45,19 @@ public abstract class ReviewerRecommendationBase {
             result.add(entry.getKey());
         }
 
-        //remove retired reviewers
+        //process retired reviewers
         if (removeRetiredReviewers)
-            result = removeRetiredReviewers(result, pullRequest);
+            result = processRetiredReviewers(result, pullRequest);
 
         //print recommended reviewers
         for (int x = 0; x < result.size(); x++) {
-            System.out.println((x + 1) + " " + result.get(x).getName());
+            logger.info((x + 1) + " " + result.get(x).getName());
         }
 
         return result;
     }
 
-
-    protected <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
-        return map.entrySet()
-                .stream()
-                .sorted(Map.Entry.comparingByValue(Collections.reverseOrder()))
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        Map.Entry::getValue,
-                        (e1, e2) -> e1,
-                        LinkedHashMap::new
-                ));
-    }
-
-
-    private List<Developer> removeRetiredReviewers(List<Developer> reviewersList, PullRequest pullRequest) {
+    private List<Developer> processRetiredReviewers(List<Developer> reviewersList, PullRequest pullRequest) {
         long timeRetired = timeRetiredInMonths * 30 * 24 * 60 * 60 * 1000;
         List<Developer> result = new ArrayList<>();
         List<Developer> removedReviewers = new ArrayList<>();
@@ -78,4 +73,15 @@ public abstract class ReviewerRecommendationBase {
         return result;
     }
 
+    protected <K, V extends Comparable<? super V>> Map<K, V> sortByValue(Map<K, V> map) {
+        return map.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByValue(Collections.reverseOrder()))
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new
+                ));
+    }
 }

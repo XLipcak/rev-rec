@@ -30,7 +30,6 @@ import java.util.*;
 public class BayesRec extends ReviewerRecommendationBase implements ReviewerRecommendation {
 
     private static final double SMOOTHING_VARIABLE = 0.01;
-    private final Log logger = LogFactory.getLog(this.getClass());
 
     @Autowired
     private FilePathDAO filePathDAO;
