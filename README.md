@@ -16,5 +16,5 @@ This project deals with optimal recommendations of source code reviewers for ope
 * [Apache Maven](https://maven.apache.org/download.cgi) has to be installed.
 * [JDK](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (at least version 8) has to be installed and <i>JAVA_HOME</i> environment variable has to be set and point to the JDK installation.
 #### Deployment:
-After the aforementioned steps are done, the application can be compiled and launched using the following command:
+After the aforementioned steps are done, the application can be compiled and launched from its root folder using the following command:
 * `mvn spring-boot:run`
