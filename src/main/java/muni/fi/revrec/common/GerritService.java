@@ -66,6 +66,9 @@ public class GerritService {
      * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
      */
     public Collection<AccountInfo> getReviewers(ChangeInfo changeInfo, String label) throws RestApiException {
+        if (changeInfo == null) {
+            return new ArrayList<>();
+        }
         try {
             List<AccountInfo> result = new ArrayList<>();
 
@@ -152,8 +155,12 @@ public class GerritService {
         //dependent on Gerrit instance
         //ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
 
-        ChangeInfo changeInfo = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS).get().get(0);
-        return changeInfo;
+        List<ChangeInfo> changeInfos = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS).get();
+        if (changeInfos.size() > 0) {
+            return changeInfos.get(0);
+        } else {
+            return null;
+        }
     }
 
     /**

@@ -11,8 +11,6 @@ import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.ReviewerRecommendation;
 import muni.fi.revrec.recommendation.ReviewerRecommendationBase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.eclipse.jgit.diff.Edit;
 import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.revwalk.FooterLine;
@@ -64,7 +62,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                 continue;
             }
             Set<Integer> lines = getLinesAffectedByCommit(fileCommitHistory.get(0).getRevCommit(), fileCommitHistory.get(1).getRevCommit(), filePath.getLocation(), pullRequest.getSubProject());
-            List<List<RevCommit>> lch = lineChangeHistory(filePath.getLocation(), lines, fileCommitHistory, pullRequest.getSubProject());
+            List<List<RevCommit>> lch = lineChangeHistory(lines, fileCommitHistory, pullRequest.getSubProject());
             for (int x = 0; x < lch.size(); x++) {
                 double points = getInitialPointForThisFile(filePath.getLocation());
                 for (int y = 0; y < lch.get(x).size(); y++) {
@@ -83,65 +81,94 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     }
 
 
+    /**
+     * Process historical commits with their points and assign these points to code reviewers, who reviewed them.
+     *
+     * @param pointsMap map of historical commits and points.
+     * @return map of code reviewers with their points.
+     */
     private Map<Developer, Double> propagateResultToUserPoints(Map<RevCommit, Double> pointsMap) {
         Map<Developer, Double> result = new HashMap<>();
 
         Map<AccountInfo, Double> reviewerCandidates = new HashMap<>();
-        Set<String> emails = new HashSet<>();
+        Set<Integer> accountIds = new HashSet<>();
 
-        try {
-            Iterator it = pointsMap.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry pair = (Map.Entry) it.next();
-                for (AccountInfo user : getUserRelatedToCommit((RevCommit) pair.getKey())) {
-                    if (reviewerCandidates.containsKey(user)) {
-                        reviewerCandidates.replace(user, reviewerCandidates.get(user) + (Double) pair.getValue());
-                    } else {
-                        reviewerCandidates.put(user, (Double) pair.getValue());
-                        emails.add(user.email);
-                    }
+        Iterator it = pointsMap.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry pair = (Map.Entry) it.next();
+            for (AccountInfo user : getCodeReviewersOfCommit((RevCommit) pair.getKey())) {
+                if (reviewerCandidates.containsKey(user)) {
+                    reviewerCandidates.replace(user, reviewerCandidates.get(user) + (Double) pair.getValue());
+                } else {
+                    reviewerCandidates.put(user, (Double) pair.getValue());
+                    accountIds.add(user._accountId);
                 }
-                it.remove();
             }
-
-            //normalisation, to refactor later
-            for (String email : emails) {
-                double points = 0;
-                AccountInfo accountInfo = null;
-                for (Map.Entry<AccountInfo, Double> entry : reviewerCandidates.entrySet()) {
-                    if (entry.getKey().email.equals(email)) {
-                        points += entry.getValue();
-                        accountInfo = entry.getKey();
-                    }
-                }
-                result.put(new Developer(accountInfo.email, accountInfo.name), points);
-            }
-        } catch (RestApiException ex) {
-            logger.error(ex.getMessage());
-            throw new ReviewerRecommendationException(ex.getMessage());
+            it.remove();
         }
+
+        //propagate score to code reviewers
+        for (Integer accountId : accountIds) {
+            double points = 0;
+            AccountInfo accountInfo = null;
+            for (Map.Entry<AccountInfo, Double> entry : reviewerCandidates.entrySet()) {
+                if (entry.getKey()._accountId.equals(accountId)) {
+                    points += entry.getValue();
+                    accountInfo = entry.getKey();
+                }
+            }
+            result.put(new Developer(accountInfo), points);
+        }
+
         return result;
     }
 
-    private List<AccountInfo> getUserRelatedToCommit(RevCommit commit) throws RestApiException {
+    /**
+     * Get information about Gerrit accounts of users, who reviewed the pull request, where commit was included.
+     *
+     * @param commit commit, which was part of the pull request.
+     * @return information about Gerrit accounts of users, who reviewed the pull request.
+     * @throws RestApiException
+     */
+    private List<AccountInfo> getCodeReviewersOfCommit(RevCommit commit) {
         String changeId = getChangeIdFromFooter(commit.getFooterLines());
         if (changeId.equals("")) {
             return new ArrayList<>();
         }
-        return (List<AccountInfo>) gerritService.getReviewers(changeId, "Code-Review");
+
+        try {
+            return (List<AccountInfo>) gerritService.getReviewers(changeId, "Code-Review");
+        } catch (RestApiException ex) {
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
+        }
     }
 
+    /**
+     * The number of assigned points may vary by types of files. Change this implementation if you want to do so.
+     *
+     * @param filePath location of file
+     * @return number of points assigned to code reviewers who reviewed this file.
+     */
     private int getInitialPointForThisFile(String filePath) {
         return INITIAL_POINT;
     }
 
-    private List<List<RevCommit>> lineChangeHistory(String filePath, Set<Integer> lines, List<CommitAndPathWrapper> fileCommitHistory, String subprojectName) {
+    /**
+     * Track line change history: identify historical commits, which modified lines specified by lines array.
+     *
+     * @param lines             lines array of modified lines.
+     * @param fileCommitHistory commit history of the file (its locations could have been changed).
+     * @param subProjectName    name of the sub-project (repository name).
+     * @return
+     */
+    private List<List<RevCommit>> lineChangeHistory(Set<Integer> lines, List<CommitAndPathWrapper> fileCommitHistory, String subProjectName) {
         List<List<RevCommit>> result = new ArrayList<>();
 
         try {
             Integer[] linesArray = lines.toArray(new Integer[lines.size()]);
-            int[][] lineHistoryMatrix = generateLineHistoryMatrix(filePath, linesArray, fileCommitHistory, subprojectName);
-            boolean[][] trackingMatrix = generateTrackingMatrix(filePath, linesArray, fileCommitHistory, lineHistoryMatrix, subprojectName);
+            int[][] lineHistoryMatrix = generateLineHistoryMatrix(linesArray, fileCommitHistory, subProjectName);
+            boolean[][] trackingMatrix = generateTrackingMatrix(linesArray, fileCommitHistory, lineHistoryMatrix, subProjectName);
             List<Set<Integer>> alreadyCheckedLines = new ArrayList<>();
             for (int x = 0; x < fileCommitHistory.size(); x++) {
                 alreadyCheckedLines.add(new HashSet<>());
@@ -158,7 +185,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                     }
                     if (x == fileCommitHistory.size() - 1) {
                         resultForActualLine.add(fileCommitHistory.get(x).getRevCommit());
-                        logger.debug("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                        logger.info("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                         break;
                     }
                     if (!fileCommitHistory.get(x).getPath().equals(fileCommitHistory.get(x).getPath())) {
@@ -170,13 +197,13 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
                     RevCommit headCommit = fileCommitHistory.get(x).getRevCommit();
                     RevCommit diffWith = fileCommitHistory.get(x + 1).getRevCommit();
-                    EditList edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath(), subprojectName);
+                    EditList edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(x).getPath(), subProjectName);
 
                     for (Edit edit : edits) {
                         if (edit.getType() == Edit.Type.REPLACE) {
                             if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
                                 resultForActualLine.add(headCommit);
-                                logger.debug("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.info("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                             }
                         }
 
@@ -184,13 +211,13 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                             if (linesArray[index] + lineHistoryMatrix[index][x] >= edit.getBeginB() + 1 && linesArray[index] + lineHistoryMatrix[index][x] <= edit.getEndB()) {
                                 alreadyCheckedLines.get(x).add(actualLine);
                                 resultForActualLine.add(headCommit);
-                                logger.debug("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.info("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                             }
                         }
 
                         if (edit.getType() == Edit.Type.DELETE) {
                             if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
-                                logger.debug("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.info("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
                             }
                         }
                     }
@@ -205,7 +232,17 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         return result;
     }
 
-    private int[][] generateLineHistoryMatrix(String filePath, Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory, String subProjectName) throws IOException {
+    /**
+     * Generate line history matrix: this matrix is used to track lines of file throughout its whole commit history.
+     * The positions of every line can by changed by every commit and this matrix is used to track the positions of
+     * particular lines in particular commits.
+     *
+     * @param linesArray        lines array of modified lines.
+     * @param fileCommitHistory commit history of the file (its locations could have been changed).
+     * @param subProjectName    name of the sub-project (repository name).
+     * @return generated line history matrix.
+     */
+    private int[][] generateLineHistoryMatrix(Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory, String subProjectName) {
         int[][] lineHistoryMatrix = new int[linesArray.length][fileCommitHistory.size()];
         for (int y = 0; y < fileCommitHistory.size(); y++) {
             if (y == fileCommitHistory.size() - 1) {
@@ -218,7 +255,16 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
 
             RevCommit headCommit = fileCommitHistory.get(y).getRevCommit();
             RevCommit diffWith = fileCommitHistory.get(y + 1).getRevCommit();
-            EditList edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
+
+            EditList edits;
+            try {
+                edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
+            } catch (IOException ex) {
+                logger.error(ex.getMessage());
+                throw new ReviewerRecommendationException(ex.getMessage());
+            }
+
+
             for (Edit edit : edits) {
                 if (edit.getType() == Edit.Type.INSERT) {
                     int amountOfInsertedLines = edit.getEndB() - edit.getBeginB();
@@ -258,7 +304,18 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         return lineHistoryMatrix;
     }
 
-    private boolean[][] generateTrackingMatrix(String filePath, Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory, int[][] lineHistoryMatrix, String subProjectName) throws IOException {
+    /**
+     * Generate tracking matrix: tracking matrix is used to identify, how long a line should be tracked in a line change history.
+     * This method generated this matrix by identifying inserted lines. We don't track such lines earlier in the line change
+     * history, as they were not in existence then.
+     *
+     * @param linesArray        array of modified lines.
+     * @param fileCommitHistory commit history of the file (its locations could have been changed).
+     * @param lineHistoryMatrix line history matrix of modified lines.
+     * @param subProjectName    name of the sub-project (repository name).
+     * @return generated tracking matrix.
+     */
+    private boolean[][] generateTrackingMatrix(Integer[] linesArray, List<CommitAndPathWrapper> fileCommitHistory, int[][] lineHistoryMatrix, String subProjectName) {
         boolean[][] trackingMatrix = new boolean[linesArray.length][fileCommitHistory.size()];
         for (int y = 0; y < fileCommitHistory.size(); y++) {
             if (y == fileCommitHistory.size() - 1) {
@@ -272,9 +329,18 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
             RevCommit headCommit = fileCommitHistory.get(y).getRevCommit();
             RevCommit diffWith = fileCommitHistory.get(y + 1).getRevCommit();
 
-            EditList edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
+            EditList edits;
+            try {
+                edits = gitService.diff(headCommit, diffWith, fileCommitHistory.get(y).getPath(), subProjectName);
+            } catch (IOException ex) {
+                logger.error(ex.getMessage());
+                throw new ReviewerRecommendationException(ex.getMessage());
+            }
+
+
             for (Edit edit : edits) {
 
+                //identify inserted lines
                 if (edit.getType() == Edit.Type.INSERT) {
                     for (int x = edit.getBeginB(); x < edit.getEndB(); x++) {
                         for (int lines = 0; lines < linesArray.length; lines++) {
@@ -286,6 +352,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                     }
                 }
 
+                //identify inserted lines, which are evaluated as replace by diff program (lines replaced by more lines)
                 if (edit.getType() == Edit.Type.REPLACE) {
                     int lineDifferenceInReplace = (edit.getEndA() - edit.getBeginA()) - (edit.getEndB() - edit.getBeginB());
                     if (lineDifferenceInReplace < 0) {
@@ -304,6 +371,15 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         return trackingMatrix;
     }
 
+    /**
+     * Get the set of line numbers affected by commit diffWith compared to the headCommit.
+     *
+     * @param headCommit     head commit.
+     * @param diffWith       commit to be compared with the head commit.
+     * @param filePath       file to be processed.
+     * @param subProjectName name of the sub-project (repository name).
+     * @return line numbers affected by the commit.
+     */
     private Set<Integer> getLinesAffectedByCommit(RevCommit headCommit, RevCommit diffWith, String filePath, String subProjectName) {
         Set<Integer> result = new LinkedHashSet<>();
         try {
@@ -331,6 +407,12 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         return result;
     }
 
+    /**
+     * Retrieve the information about Gerrit change id from the footer of the commit message.
+     *
+     * @param commitFooter footer of the commit message.
+     * @return Gerrit change id.
+     */
     private String getChangeIdFromFooter(List<FooterLine> commitFooter) {
         if (commitFooter.size() == 0) {
             return "";
