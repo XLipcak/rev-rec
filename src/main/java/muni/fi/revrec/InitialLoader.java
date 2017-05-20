@@ -1,7 +1,7 @@
 package muni.fi.revrec;
 
 import com.google.gerrit.extensions.restapi.RestApiException;
-import muni.fi.revrec.common.DataLoader;
+import muni.fi.revrec.common.GerritService;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
@@ -29,11 +29,10 @@ public class InitialLoader implements CommandLineRunner {
     private final Log logger = LogFactory.getLog(this.getClass());
 
     @Autowired
-    private DataLoader dataLoader;
-
-    @Autowired
     private PullRequestDAO pullRequestDAO;
 
+    @Autowired
+    private GerritService gerritService;
 
     @Autowired
     private BayesRec bayesRec;

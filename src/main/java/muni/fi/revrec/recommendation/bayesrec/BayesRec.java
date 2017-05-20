@@ -8,8 +8,6 @@ import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.ReviewerRecommendation;
 import muni.fi.revrec.recommendation.ReviewerRecommendationBase;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.eclipse.recommenders.jayes.BayesNet;
 import org.eclipse.recommenders.jayes.BayesNode;
 import org.eclipse.recommenders.jayes.inference.IBayesInferer;
@@ -22,7 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * Implementation of reviewer recommendation with the usage of Naive Bayes.
+ * Implementation of Naive Bayes-based Code Reviewers Recommendation Algorithm.
  *
  * @author Jakub Lipcak, Masaryk University
  */
@@ -60,6 +58,11 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         buildModel(Long.MAX_VALUE);
     }
 
+    /**
+     * Build model from pull requests, which were created before timestamp.
+     *
+     * @param timestamp model is built from pull requests, which were created earlier than timestamp.
+     */
     public void buildModel(Long timestamp) {
         logger.info("Building probabilistic model...");
 
@@ -67,107 +70,21 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         allOwners = findAllOwners(timestamp);
         allReviewers = findAllCodeReviewers(timestamp);
         allSubProjects = findAllSubProjects(timestamp);
-        int index = 0;
 
         //Build Bayesian network
         BayesNet net = new BayesNet();
 
+        //Build Reviewers node
+        BayesNode reviewersNode = createReviewersNode(net, timestamp);
 
-        //Reviewers node
-        logger.info("Computing probabilities of reviewers...");
+        //Build Subproject node
+        BayesNode subProjectNode = createSubProjectsNode(net, timestamp, reviewersNode);
 
-        BayesNode reviewersNode = net.createNode("reviewersNode");
-        String reviewersOutcomes[] = new String[allReviewers.size()];
-        double[] reviewersProbabilities = new double[allReviewers.size()];
-        double allReviewersSize = (double) pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp).size();
-        for (Developer reviewer : allReviewers) {
-            reviewersOutcomes[index] = reviewer.getId().toString();
-            reviewersProbabilities[index] = ((double) (pullRequestDAO.findByReviewerAndProjectNameAndTimestampLessThan(reviewer, project, timestamp).size()) / allReviewersSize);
-            index++;
-            logger.info(index + "/" + reviewersProbabilities.length);
-        }
-        reviewersNode.addOutcomes(reviewersOutcomes);
-        reviewersNode.setProbabilities(reviewersProbabilities);
+        //Build File path node
+        BayesNode filePathNode = createFilePathsNode(net, timestamp, reviewersNode);
 
-        //Subproject node
-        logger.info("Computing probabilities of subprojects...");
-
-        BayesNode subProjectNode = net.createNode("subProjectNode");
-        String subProjectOutcomes[] = new String[allSubProjects.size()];
-        double[] subProjectProbabilities = new double[allReviewers.size() * allSubProjects.size()];
-        String[] subProjectsArray = allSubProjects.toArray(new String[allSubProjects.size()]);
-        index = 0;
-        int subProjectIndex = 0;
-        for (String subProject : subProjectsArray) {
-            subProjectOutcomes[subProjectIndex] = subProject;
-            subProjectIndex++;
-        }
-
-        for (Developer reviewer : allReviewers) {
-            double denumeratorSize = (double) pullRequestDAO.findByProjectNameAndReviewerAndTimestampLessThan(project, reviewer, timestamp).size();
-            for (String subProject : subProjectsArray) {
-                subProjectProbabilities[index] = ((double) pullRequestDAO.findByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(project, subProject, reviewer, timestamp).size() /
-                        denumeratorSize);
-                index++;
-                logger.info(index + "/" + subProjectProbabilities.length);
-            }
-            subProjectProbabilities = laplaceSmoothing(index - subProjectsArray.length, index, subProjectProbabilities);
-        }
-
-        subProjectNode.addOutcomes(subProjectOutcomes);
-        subProjectNode.setParents(Arrays.asList(reviewersNode));
-        subProjectNode.setProbabilities(subProjectProbabilities);
-
-
-        //File path node
-        logger.info("Computing probabilities of file paths...");
-
-        BayesNode filePathNode = net.createNode("filePathNode");
-        String[] filePathNodeOutcomes = allFilePaths.toArray(new String[allFilePaths.size()]);
-        double[] filePathNodeProbabilities = new double[allReviewers.size() * allFilePaths.size()];
-        index = 0;
-        for (Developer reviewer : allReviewers) {
-            double denumeratorSize = (double) filePathDAO.findByPullRequestProjectNameAndPullRequestReviewerAndPullRequestTimestampLessThan(project, reviewer, timestamp).size();
-            for (String filePath : filePathNodeOutcomes) {
-                filePathNodeProbabilities[index] = //1d / filePathNodeOutcomes.length;
-                        filePathDAO.findByPullRequestProjectNameAndLocationAndPullRequestReviewerAndPullRequestTimestampLessThan(project,
-                                filePath, reviewer, timestamp).size() / denumeratorSize;
-                index++;
-                logger.info(index + "/" + filePathNodeProbabilities.length);
-            }
-            filePathNodeProbabilities = laplaceSmoothing(index - filePathNodeOutcomes.length, index, filePathNodeProbabilities);
-        }
-        filePathNode.addOutcomes(filePathNodeOutcomes);
-        filePathNode.setParents(Arrays.asList(reviewersNode));
-        filePathNode.setProbabilities(filePathNodeProbabilities);
-
-
-        //Owner node
-        logger.info("Computing probabilities of pull request owners...");
-
-        BayesNode ownerNode = net.createNode("ownerNode");
-        String[] ownerNodeOutcomes = new String[allOwners.size()];
-        int ownerIndex = 0;
-        for (Developer owner : allOwners) {
-            ownerNodeOutcomes[ownerIndex] = owner.getId().toString();
-            ownerIndex++;
-        }
-        double[] ownerNodeProbabilities = new double[allReviewers.size() * allOwners.size()];
-        index = 0;
-        for (Developer reviewer : allReviewers) {
-            double denumeratorSize = (double) (pullRequestDAO.findByProjectNameAndReviewerAndTimestampLessThan(project, reviewer, timestamp).size());
-            for (Developer owner : allOwners) {
-                ownerNodeProbabilities[index] = (double) pullRequestDAO.findByProjectNameAndReviewerAndOwnerAndTimestampLessThan(project, reviewer, owner, timestamp).size() /
-                        denumeratorSize;
-                index++;
-                logger.info(index + "/" + ownerNodeProbabilities.length);
-            }
-            ownerNodeProbabilities = laplaceSmoothing(index - allOwners.size(), index, ownerNodeProbabilities);
-        }
-
-        ownerNode.addOutcomes(ownerNodeOutcomes);
-        ownerNode.setParents(Arrays.asList(reviewersNode));
-        ownerNode.setProbabilities(ownerNodeProbabilities);
+        //Build Owner node
+        BayesNode ownerNode = createOwnersNode(net, timestamp, reviewersNode);
 
 
         inferer = new JunctionTreeAlgorithm();
@@ -178,6 +95,141 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         this.ownerNode = ownerNode;
     }
 
+    /**
+     * Create Reviewers node of Naive Bayes.
+     *
+     * @param net       Bayesian network.
+     * @param timestamp we only consider records created before timestamp.
+     * @return node of Naive Bayes.
+     */
+    private BayesNode createReviewersNode(BayesNet net, Long timestamp) {
+        logger.info("Computing probabilities of reviewers...");
+
+        int index = 0;
+        BayesNode reviewersNode = net.createNode("reviewersNode");
+        String reviewersOutcomes[] = new String[allReviewers.size()];
+        double[] reviewersProbabilities = new double[allReviewers.size()];
+        double allReviewersSize = (double) pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp).size();
+        for (Developer reviewer : allReviewers) {
+            reviewersOutcomes[index] = reviewer.getId().toString();
+            reviewersProbabilities[index] = ((double) (pullRequestDAO.countByReviewerAndProjectNameAndTimestampLessThan(reviewer, project, timestamp)) / allReviewersSize);
+            index++;
+            logger.info(index + "/" + reviewersProbabilities.length);
+        }
+        reviewersNode.addOutcomes(reviewersOutcomes);
+        reviewersNode.setProbabilities(reviewersProbabilities);
+
+        return reviewersNode;
+    }
+
+    /**
+     * Create Sub-projects node of Naive Bayes.
+     *
+     * @param net       Bayesian network.
+     * @param timestamp we only consider records created before timestamp.
+     * @return node of Naive Bayes.
+     */
+    private BayesNode createSubProjectsNode(BayesNet net, Long timestamp, BayesNode parentNode) {
+        logger.info("Computing probabilities of subprojects...");
+
+        int index = 0;
+        BayesNode subProjectNode = net.createNode("subProjectNode");
+        String subProjectOutcomes[] = new String[allSubProjects.size()];
+        double[] subProjectProbabilities = new double[allReviewers.size() * allSubProjects.size()];
+        String[] subProjectsArray = allSubProjects.toArray(new String[allSubProjects.size()]);
+        int subProjectIndex = 0;
+        for (String subProject : subProjectsArray) {
+            subProjectOutcomes[subProjectIndex] = subProject;
+            subProjectIndex++;
+        }
+
+        for (Developer reviewer : allReviewers) {
+            double denumeratorSize = (double) pullRequestDAO.findByProjectNameAndReviewerAndTimestampLessThan(project, reviewer, timestamp).size();
+            for (String subProject : subProjectsArray) {
+                subProjectProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(project, subProject, reviewer, timestamp) /
+                        denumeratorSize);
+                index++;
+                logger.info(index + "/" + subProjectProbabilities.length);
+            }
+            subProjectProbabilities = laplaceSmoothing(index - subProjectsArray.length, index, subProjectProbabilities);
+        }
+
+        subProjectNode.addOutcomes(subProjectOutcomes);
+        subProjectNode.setParents(Arrays.asList(parentNode));
+        subProjectNode.setProbabilities(subProjectProbabilities);
+
+        return subProjectNode;
+    }
+
+    /**
+     * Create Owners node of Naive Bayes.
+     *
+     * @param net       Bayesian network.
+     * @param timestamp we only consider records created before timestamp.
+     * @return node of Naive Bayes.
+     */
+    private BayesNode createOwnersNode(BayesNet net, Long timestamp, BayesNode parentNode) {
+        logger.info("Computing probabilities of pull request owners...");
+
+        int index = 0;
+        BayesNode ownerNode = net.createNode("ownerNode");
+        String[] ownerNodeOutcomes = new String[allOwners.size()];
+        int ownerIndex = 0;
+        for (Developer owner : allOwners) {
+            ownerNodeOutcomes[ownerIndex] = owner.getId().toString();
+            ownerIndex++;
+        }
+        double[] ownerNodeProbabilities = new double[allReviewers.size() * allOwners.size()];
+        for (Developer reviewer : allReviewers) {
+            double denumeratorSize = (double) (pullRequestDAO.findByProjectNameAndReviewerAndTimestampLessThan(project, reviewer, timestamp).size());
+            for (Developer owner : allOwners) {
+                ownerNodeProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndReviewerAndOwnerAndTimestampLessThan(project,
+                        reviewer, owner, timestamp)) / denumeratorSize;
+                index++;
+                logger.info(index + "/" + ownerNodeProbabilities.length);
+            }
+            ownerNodeProbabilities = laplaceSmoothing(index - allOwners.size(), index, ownerNodeProbabilities);
+        }
+
+        ownerNode.addOutcomes(ownerNodeOutcomes);
+        ownerNode.setParents(Arrays.asList(parentNode));
+        ownerNode.setProbabilities(ownerNodeProbabilities);
+
+        return ownerNode;
+    }
+
+    /**
+     * Create File paths node of Naive Bayes.
+     *
+     * @param net       Bayesian network.
+     * @param timestamp we only consider records created before timestamp.
+     * @return node of Naive Bayes.
+     */
+    private BayesNode createFilePathsNode(BayesNet net, Long timestamp, BayesNode parentNode) {
+        int index = 0;
+
+        logger.info("Computing probabilities of file paths...");
+        BayesNode filePathNode = net.createNode("filePathNode");
+        String[] filePathNodeOutcomes = allFilePaths.toArray(new String[allFilePaths.size()]);
+        double[] filePathNodeProbabilities = new double[allReviewers.size() * allFilePaths.size()];
+        for (Developer reviewer : allReviewers) {
+            double denumeratorSize = (double) filePathDAO.findByPullRequestProjectNameAndPullRequestReviewerAndPullRequestTimestampLessThan(project, reviewer, timestamp).size();
+            for (String filePath : filePathNodeOutcomes) {
+                filePathNodeProbabilities[index] =
+                        ((double) filePathDAO.countByPullRequestProjectNameAndLocationAndPullRequestReviewerAndPullRequestTimestampLessThan(project,
+                                filePath, reviewer, timestamp)) / denumeratorSize;
+                index++;
+                logger.info(index + "/" + filePathNodeProbabilities.length);
+            }
+            filePathNodeProbabilities = laplaceSmoothing(index - filePathNodeOutcomes.length, index, filePathNodeProbabilities);
+        }
+        filePathNode.addOutcomes(filePathNodeOutcomes);
+        filePathNode.setParents(Arrays.asList(parentNode));
+        filePathNode.setProbabilities(filePathNodeProbabilities);
+
+        return filePathNode;
+    }
+
     @Override
     public List<Developer> recommend(PullRequest pullRequest) {
         if (inferer == null) {
@@ -185,10 +237,14 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         }
 
         Map<Developer, Double> result = new HashMap<>();
+
+        //recommendation is done for every file path separately
         for (FilePath x : pullRequest.getFilePaths()) {
             Map<Developer, Double> resultList = recommend(pullRequest, x.getLocation());
             resultList = sortByValue(resultList);
             double y = resultList.size();
+
+            //assign points to code reviewers
             for (Map.Entry<Developer, Double> entry : resultList.entrySet()) {
                 if (result.containsKey(entry.getKey())) {
                     result.replace(entry.getKey(), result.get(entry.getKey()) + y);
@@ -198,25 +254,32 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
                 y--;
             }
         }
+
         return processResult(result, pullRequest);
     }
 
+    /**
+     * Recommend reviewers for one file path.
+     *
+     * @param pullRequest      pullRequest, for which reviewers are recommended.
+     * @param filePathLocation file path processed as the feature.
+     * @return map of reviewers and their points assigned by the recommendation algorithm.
+     */
     private Map<Developer, Double> recommend(PullRequest pullRequest, String filePathLocation) {
         Map<Developer, Double> result = new HashMap<>();
-
-        Map<BayesNode, String> evidence = new HashMap<BayesNode, String>();
+        Map<BayesNode, String> evidence = new HashMap<>();
 
         if (new HashSet<>(allSubProjects).contains(pullRequest.getSubProject())) {
             evidence.put(subProjectNode, pullRequest.getSubProject());
         } else {
-            System.out.println("Bayes otherSubProject");
+            //unknown variable
             evidence.put(subProjectNode, "otherSubProject");
         }
 
         if (new HashSet<>(allFilePaths).contains(filePathLocation)) {
             evidence.put(filePathNode, filePathLocation);
         } else {
-            System.out.println("Bayes otherFilePath");
+            //unknown variable
             evidence.put(filePathNode, "otherFilePath");
         }
 
@@ -224,7 +287,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         if (new HashSet<>(allOwners).contains(pullRequest.getOwner())) {
             evidence.put(ownerNode, pullRequest.getOwner().getId().toString());
         } else {
-            System.out.println("Bayes -1");
+            //unknown variable (represented by owner with id=-1)
             evidence.put(ownerNode, "-1");
         }
 
@@ -244,26 +307,36 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
     }
 
 
+    /**
+     * Find all code reviewers of pull requests, who reviewed at least one pull request earlier than timestamp.
+     *
+     * @param timestamp time specification.
+     * @return all code reviewers, who reviewed at least one pull request earlier than timestamp.
+     */
     private List<Developer> findAllCodeReviewers(Long timestamp) {
         Set<Developer> allReviewers = new HashSet<>();
 
         for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp)) {
-            for (Developer reviewer : pullRequest.getReviewer()) {
-                allReviewers.add(reviewer);
-            }
+            allReviewers.addAll(pullRequest.getReviewer());
         }
 
         return new ArrayList<>(allReviewers);
     }
 
-    public List<Developer> findAllOwners(Long timeStamp) {
+    /**
+     * Find all sub-projects of pull requests created earlier than timestamp.
+     *
+     * @param timestamp time specification.
+     * @return all sub-projects of pull requests created before timestamp.
+     */
+    public List<Developer> findAllOwners(Long timestamp) {
         Set<Developer> allOwners = new HashSet<>();
 
-        for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timeStamp)) {
+        for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp)) {
             allOwners.add(pullRequest.getOwner());
         }
 
-        //add other reviewer
+        //add other owner representing an unknown variable (with id=-1)
         Developer reviewer = new Developer();
         reviewer.setId(-1);
         allOwners.add(reviewer);
@@ -271,16 +344,55 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         return new ArrayList<>(allOwners);
     }
 
+    /**
+     * Find all sub-projects of pull requests created earlier than timestamp.
+     *
+     * @param timestamp time specification.
+     * @return all sub-projects of pull requests created before timestamp.
+     */
     public List<String> findAllSubProjects(Long timestamp) {
         Set<String> allSubProjects = new HashSet<>();
         for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp)) {
             allSubProjects.add(pullRequest.getSubProject());
         }
+
+        //add otherSubProject representing an unknown variable
         allSubProjects.add("otherSubProject");
 
         return new ArrayList<>(allSubProjects);
     }
 
+    /**
+     * Find all file paths of pull requests created earlier than timestamp.
+     *
+     * @param timestamp time specification.
+     * @return all file paths of pull requests created before timestamp.
+     */
+    private List<String> findAllFilePaths(long timestamp) {
+        Set<String> allFilePaths = new HashSet<>();
+        for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp)) {
+            for (FilePath filePath : pullRequest.getFilePaths()) {
+                allFilePaths.add(filePath.getLocation());
+            }
+        }
+
+        //add otherFilePath representing an unknown variable
+        allFilePaths.add("otherFilePath");
+
+        return new ArrayList<>(allFilePaths);
+    }
+
+
+    /**
+     * Distribute the value of SMOOTHING_VARIABLE to all elements with zero probability
+     * between beginIndex and endIndex in the array. The value of SMOOTHING_VARIABLE will
+     * be equally subtracted from elements with non-zero probability between these indexes.
+     *
+     * @param beginIndex the beginning index, inclusive.
+     * @param endIndex   the ending index, exclusive.
+     * @param array      probability array.
+     * @return array modified by SMOOTHING_VARIABLE.
+     */
     private double[] laplaceSmoothing(int beginIndex, int endIndex, double[] array) {
         int nonZeroElements = 0;
         int zeroElements = 0;
@@ -300,17 +412,5 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         }
 
         return array;
-    }
-
-    private List<String> findAllFilePaths(long timestamp) {
-        Set<String> allFilePaths = new HashSet<>();
-        for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp)) {
-            for (FilePath filePath : pullRequest.getFilePaths()) {
-                allFilePaths.add(filePath.getLocation());
-            }
-        }
-        allFilePaths.add("otherFilePath");
-
-        return new ArrayList<>(allFilePaths);
     }
 }

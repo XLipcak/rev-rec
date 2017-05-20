@@ -26,15 +26,15 @@ public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
 
     List<PullRequest> findByProjectNameOrderByTimestampDesc(String name);
 
-    List<PullRequest> findByReviewerAndProjectNameAndTimestampLessThan(Developer reviewer, String project, Long timestamp);
+    Long countByReviewerAndProjectNameAndTimestampLessThan(Developer reviewer, String project, Long timestamp);
 
-    List<PullRequest> findByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(String project, String subProject, Developer reviewer, Long timestamp);
+    Long countByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(String project, String subProject, Developer reviewer, Long timestamp);
 
     List<PullRequest> findByProjectNameAndSubProjectAndTimestampLessThan(String project, String subProject, Long timestamp);
 
     List<PullRequest> findByProjectNameAndReviewerAndTimestampLessThan(String project, Developer reviewer, Long time1);
 
-    List<PullRequest> findByProjectNameAndReviewerAndOwnerAndTimestampLessThan(String project, Developer reviewer, Developer owner, Long timestamp);
+    Long countByProjectNameAndReviewerAndOwnerAndTimestampLessThan(String project, Developer reviewer, Developer owner, Long timestamp);
 
     List<PullRequest> findAll();
 }

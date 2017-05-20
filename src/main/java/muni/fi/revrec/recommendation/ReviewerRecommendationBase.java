@@ -10,7 +10,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Base abstract class containing methods, which are useful for all Code Reviewers Recommendation Algorithms.
+ * Base abstract class containing methods, which are the same for all Code Reviewers Recommendation Algorithms.
  *
  * @author Jakub Lipcak, Masaryk University
  */
@@ -31,10 +31,12 @@ public abstract class ReviewerRecommendationBase {
     }
 
     /**
-     * 
-     * @param map
-     * @param pullRequest
-     * @return
+     * Method processResult contains the functionality, which is done for every recommendation: sort reviewers
+     * by their scores, process retired reviewers and log the result.
+     *
+     * @param map         code reviewers and their scores.
+     * @param pullRequest pull request, for which reviewers are recommended
+     * @return list of reviewers sorted by their scores.
      */
     protected List<Developer> processResult(Map<Developer, Double> map, PullRequest pullRequest) {
 
@@ -57,6 +59,14 @@ public abstract class ReviewerRecommendationBase {
         return result;
     }
 
+    /**
+     * Move down in the list those reviewers, who haven't done any code review in recent n months.
+     * n value can be set in application.properties
+     *
+     * @param reviewersList reviewers recommended for pull request.
+     * @param pullRequest   pull request, for which reviewers are recommended.
+     * @return list of recommended reviewers with processed retired reviewers.
+     */
     private List<Developer> processRetiredReviewers(List<Developer> reviewersList, PullRequest pullRequest) {
         long timeRetired = timeRetiredInMonths * 30 * 24 * 60 * 60 * 1000;
         List<Developer> result = new ArrayList<>();

@@ -14,6 +14,6 @@ public interface FilePathDAO extends CrudRepository<FilePath, Long> {
     List<FilePath> findByPullRequestProjectNameAndPullRequestReviewerAndPullRequestTimestampLessThan(String projectName,
                                                                                                      Developer reviewer, Long timestamp);
 
-    List<FilePath> findByPullRequestProjectNameAndLocationAndPullRequestReviewerAndPullRequestTimestampLessThan(String projectName, String location,
+    Long countByPullRequestProjectNameAndLocationAndPullRequestReviewerAndPullRequestTimestampLessThan(String projectName, String location,
                                                                                                                 Developer reviewer, Long timestamp);
 }

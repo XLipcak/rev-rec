@@ -4,7 +4,6 @@ import muni.fi.revrec.recommendation.bayesrec.BayesRec;
 import muni.fi.revrec.recommendation.revfinder.RevFinder;
 import muni.fi.revrec.recommendation.reviewbot.ReviewBot;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,7 +27,7 @@ public class ModelBuilderScheduledTask {
     /**
      * Build models of reviewers recommendation systems.
      */
-    @Scheduled(cron = "${recommendation.jobs.buildModel.cron}")
+    //@Scheduled(cron = "${recommendation.jobs.buildModel.cron}") //uncomment this line, if you want to schedule this task
     public void buildModels() {
         revFinder.buildModel();
         reviewBot.buildModel();

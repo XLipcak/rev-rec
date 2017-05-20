@@ -1,7 +1,6 @@
 package muni.fi.revrec.common;
 
 import com.google.gerrit.extensions.api.GerritApi;
-import com.google.gerrit.extensions.api.changes.Changes;
 import com.google.gerrit.extensions.client.ListChangesOption;
 import com.google.gerrit.extensions.common.*;
 import com.google.gerrit.extensions.restapi.RestApiException;
@@ -12,6 +11,7 @@ import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.project.ProjectDAO;
 import muni.fi.revrec.model.pullRequest.PullRequest;
+import muni.fi.revrec.model.reviewer.Developer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * This class implements communication with Gerrit system via REST API.
+ * This class implements communication with Gerrit system via its REST API.
  *
  * @author Jakub Lipcak, Masaryk University
  */
@@ -38,6 +38,14 @@ public class GerritService {
         this.gerritApi = gerritRestApiFactory.create(authData);
     }
 
+    /**
+     * Get accounts, who labeled the pull request with specified changeId.
+     *
+     * @param changeId Gerrit changeId of the pull request.
+     * @param label    label value.
+     * @return list of accounts, who labeled the given pull request with the specified label.
+     * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
+     */
     public Collection<AccountInfo> getReviewers(String changeId, String label) throws RestApiException {
         ChangeInfo changeInfo = null;
         try {
@@ -49,6 +57,14 @@ public class GerritService {
         return getReviewers(changeInfo, label);
     }
 
+    /**
+     * Get accounts, who labeled the given changeInfo.
+     *
+     * @param changeInfo changeInfo representing the Gerrit pull request.
+     * @param label      label value.
+     * @return list of accounts, who labeled the given pull request with the specified label.
+     * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
+     */
     public Collection<AccountInfo> getReviewers(ChangeInfo changeInfo, String label) throws RestApiException {
         try {
             List<AccountInfo> result = new ArrayList<>();
@@ -74,6 +90,13 @@ public class GerritService {
         }
     }
 
+    /**
+     * Get accounts, which commented the pull request given as a parameter.
+     *
+     * @param changeInfo changeInfo representing the Gerrit pull request.
+     * @return list of accounts, which commented the pull request.
+     * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
+     */
     public Collection<AccountInfo> getCommentators(ChangeInfo changeInfo) throws RestApiException {
         List<AccountInfo> result = new ArrayList<>();
 
@@ -86,19 +109,25 @@ public class GerritService {
         return result;
     }
 
-    public int getChangeNumber(String changeId) throws RestApiException {
-        try {
-            ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
-            return changeInfo._number;
-        } catch (NoSuchElementException | IllegalArgumentException | HttpStatusException ex) {
-            throw new ReviewerRecommendationException(ex.getMessage());
-        }
-    }
 
+    /**
+     * Get account info with specified Gerrit id.
+     *
+     * @param id id of an account.
+     * @return account with specified Gerrit id.
+     * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
+     */
     public AccountInfo getAccount(String id) throws RestApiException {
         return gerritApi.accounts().id(id).get();
     }
 
+    /**
+     * Get file paths modified in the pull request with Gerrit changeId.
+     *
+     * @param changeId change id of the Gerrit pull request.
+     * @return file paths modified in the pull request.
+     * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
+     */
     public List<FilePath> getFilePaths(String changeId) throws RestApiException {
         List<FilePath> result = new ArrayList<>();
         Map<String, FileInfo> changeInfo = gerritApi.changes().id(changeId).revision("current").files();
@@ -109,30 +138,41 @@ public class GerritService {
             }
         }
 
-
         return result;
     }
 
+    /**
+     * Get change info from change id.
+     *
+     * @param changeId Gerrit change id.
+     * @return object of class ChangeInfo containing information about pull request with changeId.
+     * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
+     */
     public ChangeInfo getChange(String changeId) throws RestApiException {
         //dependent on Gerrit instance
         //ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
+
         ChangeInfo changeInfo = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS).get().get(0);
         return changeInfo;
     }
 
-    public List<ChangeInfo> getGerritChanges(int start) throws RestApiException {
-        Changes.QueryRequest queryRequest = gerritApi.changes().query();
-        queryRequest = queryRequest.withStart(start);
-        return queryRequest.get();
-    }
-
+    /**
+     * Get pull request from gerritChangeNumber.
+     *
+     * @param gerritChangeNumber change number of the pull request in Gerrit.
+     * @return pullRequest object containing timestamp, file paths, sub-project name
+     * and owner information of the pull request with gerritChangeNumber.
+     */
     public PullRequest getPullRequest(String gerritChangeNumber) {
         try {
             ChangeInfo changeInfo = getChange(gerritChangeNumber);
+            Set<FilePath> result = new HashSet<>(getFilePaths(gerritChangeNumber));
+
             PullRequest pullRequest = new PullRequest();
             pullRequest.setTimestamp(changeInfo.created.getTime());
-            Set<FilePath> result = new HashSet<>(getFilePaths(gerritChangeNumber));
             pullRequest.setFilePaths(result);
+            pullRequest.setSubProject(changeInfo.project);
+            pullRequest.setOwner(new Developer(changeInfo.owner));
 
             return pullRequest;
         } catch (RestApiException ex) {
