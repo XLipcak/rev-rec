@@ -1,12 +1,20 @@
 # Optimal Recommendations for Source Code Reviews
-This thesis will focus on evaluating several alternatives for the recommendation of the most appropriate reviewer for software code changes, providing a prototype that can be used to test several algorithms.
+This project deals with optimal recommendations of source code reviewers for open source projects. It contains the implementation of RevFinder algorithm (http://ieeexplore.ieee.org/document/7081824/), ReviewBot algorithm (https://labs.vmware.com/download/198/) and of a novel Naive Bayes-based <i>Code Reviewers Recommendation Algorithm</i>.
 
-#### Milestones:
-1. [RevFinder] (http://ieeexplore.ieee.org/document/7081824/) Implementation. (01.11.2016 ✔)
-2. [ReviewBot] (https://labs.vmware.com/download/198/) Implementation. (25.11.2016 ✔)
-3. Propose new recommendation approach with possible benefits. (04.12.2016 ✔)
-4. Prepare data sources for testing. (31.12.2016 ✔)
-5. Improve the prototype and execute tests on open source software projects providing an experimental evaluation. (29.01.2017 ✔)
-6. Finish all implementation parts of the thesis, improve it as much as possible and implement some GUI (when it would make sense). (28.02.2017 ✔) 
-7. Prepare the outline of written part of the thesis. (12.03.2017 ✔)
-8. Finish the thesis. (14.05.2017)
+## Configure Database and import data:
+#### You can either:
+* Use the configuration defined in the <i>application.properties</i>. The connection is configured against the remote DB provided by Amazon Web Services. This database contains all the data which were used for testing the algorithms. However, this option is much slower than the local database and it should only be used to demonstrate the functionality of the application. Running all the test configurations against this DB is not recommended.
+
+#### or
+
+* * Download and install the [MySql Server](https://dev.mysql.com/downloads/mysql/).
+  * Import the data from our [import scripts](https://github.com/XLipcak/rev-rec/tree/master/data/sql).
+  * Set the database settings in the <i>application.properties</i> 
+
+## Build and Run:
+#### The aplication has the following requirements:
+* [Apache Maven](https://maven.apache.org/download.cgi) has to be installed.
+* [JDK](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) (at least version 8) has to be installed and <i>JAVA_HOME</i> environment variable has to be set and point to the JDK installation.
+#### Deployment:
+After the aforementioned steps are done, the application can be compiled and launched using the following command:
+* `mvn spring-boot:run`
