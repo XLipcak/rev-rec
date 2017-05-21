@@ -49,21 +49,24 @@ public class InitialLoader implements CommandLineRunner {
     public void run(String... strings) throws Exception {
 
 
-        // run the evaluation of the RevFinder algorithm
+        /* run the evaluation of the RevFinder algorithm */
         //evaluateRevFinderAlgorithm();
 
-        // run the evaluation of the Naive Bayes-based recommendation algorithm
+        /* run the evaluation of the Naive Bayes-based recommendation algorithm */
         //evaluateBayesRecAlgorithm();
 
-        // example of recommendation using the RevFinder algorithm
-        revFinder.recommend(gerritService.getPullRequest("31353"));
+        /* example of recommendation using the RevFinder algorithm */
+        //revFinder.recommend(gerritService.getPullRequest("31353"));
 
-        // example of recommendation using the ReviewBot algorithm
-        //reviewBot.recommend(gerritService.getPullRequest("31353"));
-
-        // example of recommendation using the Naive Bayes-based recommendation algorithm
+        /* example of recommendation using the Naive Bayes-based recommendation algorithm */
         //bayesRec.buildModel();
         //bayesRec.recommend(gerritService.getPullRequest("31353"));
+
+        /* example of recommendation using the ReviewBot algorithm
+           run 'git clone https://android.googlesource.com/platform/bionic'
+           in the 'repos/android/platform' folder before running this example
+        */
+        reviewBot.recommend(gerritService.getPullRequest("31353"));
     }
 
     /**

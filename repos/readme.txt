@@ -1,0 +1,2 @@
+Clone Git repositories into this folder, if you want to use the ReviewBot algorithm for the recommendation of code reviewers.
+There must be the following folder structure: repos/projectName/subProjectName/repositoryContent
