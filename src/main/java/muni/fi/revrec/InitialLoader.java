@@ -56,7 +56,7 @@ public class InitialLoader implements CommandLineRunner {
         //evaluateBayesRecAlgorithm();
 
         /* example of recommendation using the RevFinder algorithm */
-        //revFinder.recommend(gerritService.getPullRequest("31353"));
+        revFinder.recommend(gerritService.getPullRequest("31353"));
 
         /* example of recommendation using the Naive Bayes-based recommendation algorithm */
         //bayesRec.buildModel();
@@ -66,7 +66,7 @@ public class InitialLoader implements CommandLineRunner {
            run 'git clone https://android.googlesource.com/platform/bionic'
            in the 'repos/android/platform' folder before running this example
         */
-        reviewBot.recommend(gerritService.getPullRequest("31353"));
+        //reviewBot.recommend(gerritService.getPullRequest("31353"));
     }
 
     /**
