@@ -9,8 +9,6 @@ import javax.persistence.*;
 import java.util.Set;
 
 /**
- * This class is used to represent the code change waiting for code review, independently of PullRequest class in api model.
- *
  * @author Jakub Lipcak, Masaryk University
  */
 @Entity
@@ -32,7 +30,7 @@ public class PullRequest {
     private Integer insertions;
     private Integer deletions;
 
-    @JoinTable(name="review")
+    @JoinTable(name = "review")
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Developer> reviewer;
 
@@ -133,9 +131,4 @@ public class PullRequest {
         this.filePaths = filePaths;
     }
 
-    /*public void setFilePaths(List<String> filePaths) {
-        Set<FilePath> result = new HashSet<>();
-        filePaths.forEach(x -> result.add(new FilePath(x)));
-        this.filePaths = result;
-    }*/
 }

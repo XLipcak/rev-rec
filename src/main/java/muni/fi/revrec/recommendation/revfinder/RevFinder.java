@@ -39,6 +39,12 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
     }
 
 
+    /**
+     * Initialize all previous pull requests and process their file paths which will be used for the recommendation.
+     *
+     * @param allPreviousReviews all previously reviewed pull requests.
+     * @param useSubProjectName  set, whether sub-projects' names without slashes should be added at the beginning of every file path.
+     */
     private void init(List<PullRequest> allPreviousReviews, boolean useSubProjectName) {
         if (useSubProjectName) {
             allPreviousReviews.forEach(this::modifyPullRequestFilePaths);
@@ -93,6 +99,12 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
         return processResult(bordaCountCombination(reviewerCandidates), pullRequest);
     }
 
+    /**
+     * Combine scores assigned to code reviewer candidates using the Borda count combination method.
+     *
+     * @param reviewerCandidates list of reviewer candidates and scores assigned to these candidates by four string comparison techniques.
+     * @return code reviewer and their scores assigned by the Borda count combination method.
+     */
     private Map<Developer, Double> bordaCountCombination(ArrayList<HashMap<Developer, Double>> reviewerCandidates) {
         Map<Developer, Double> result = new HashMap<>();
 
@@ -124,6 +136,14 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
         return result;
     }
 
+    /**
+     * Find the similarity between two file paths using the specified string comparison method.
+     *
+     * @param path1               first string.
+     * @param path2               second string.
+     * @param comparisonTechnique string comparison method.
+     * @return score assigned by the specified string comparison method.
+     */
     private double filePathSimilarity(String path1, String path2,
                                       int comparisonTechnique) {
 
@@ -146,7 +166,14 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
         return score / (double) (Math.max(path1.split("/").length, path2.split("/").length));
     }
 
-    // File Path Comparison recommendation:
+
+    /**
+     * Find the longest common prefix of two strings.
+     *
+     * @param path1 first string.
+     * @param path2 second string.
+     * @return longest common prefix in the file paths of path1 and path2.
+     */
     private int longestCommonPrefix(String path1, String path2) {
 
         String[] path1Array = path1.split("/");
@@ -161,6 +188,13 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
         return result;
     }
 
+    /**
+     * Find the longest common suffix of two strings.
+     *
+     * @param path1 first string.
+     * @param path2 second string.
+     * @return longest common suffix in the file paths of path1 and path2.
+     */
     private int longestCommonSuffix(String path1, String path2) {
 
         String[] path1Array = path1.split("/");
@@ -176,6 +210,13 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
         return result;
     }
 
+    /**
+     * Find the longest common substring of two strings.
+     *
+     * @param path1 first string.
+     * @param path2 second string.
+     * @return longest common substring in the file paths of path1 and path2.
+     */
     private int longestCommonSubstring(String path1, String path2) {
 
         String[] path1Array = path1.split("/");
@@ -206,8 +247,14 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
         return maxValue;
     }
 
+    /**
+     * Find the longest common subsequence of two strings.
+     *
+     * @param path1 first string.
+     * @param path2 second string.
+     * @return longest common subsequence in the file paths of path1 and path2.
+     */
     private int longestCommonSubsequence(String path1, String path2) {
-
         String[] path1Array = path1.split("/");
         String[] path2Array = path2.split("/");
         int m = path1Array.length;
@@ -230,20 +277,31 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
         return dpMatrix[m][n];
     }
 
-    private String removeSlash(String filePath) {
+    /**
+     * Remove slashes from the given string.
+     *
+     * @param text original text.
+     * @return text without slashes.
+     */
+    private String removeSlashes(String text) {
         String result = "";
 
-        for (int x = 0; x < filePath.length(); x++) {
-            if (filePath.charAt(x) != '/') {
-                result += filePath.charAt(x);
+        for (int x = 0; x < text.length(); x++) {
+            if (text.charAt(x) != '/') {
+                result += text.charAt(x);
             }
         }
         return result;
     }
 
+    /**
+     * Add name of the sub-project without slashes to the beginning of every file path of the pull request.
+     *
+     * @param pullRequest pull request to be modified.
+     */
     private void modifyPullRequestFilePaths(PullRequest pullRequest) {
         Set<FilePath> filePaths = new HashSet<>();
-        pullRequest.getFilePaths().forEach(x -> filePaths.add(new FilePath(removeSlash(pullRequest.getSubProject()) + "/" + x.getLocation())));
+        pullRequest.getFilePaths().forEach(x -> filePaths.add(new FilePath(removeSlashes(pullRequest.getSubProject()) + "/" + x.getLocation())));
         pullRequest.setFilePaths(filePaths);
     }
 

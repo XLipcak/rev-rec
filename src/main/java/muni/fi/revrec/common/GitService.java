@@ -1,5 +1,6 @@
 package muni.fi.revrec.common;
 
+import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.recommendation.reviewbot.CommitAndPathWrapper;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -10,7 +11,6 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.EditList;
 import org.eclipse.jgit.diff.RenameDetector;
-import org.eclipse.jgit.errors.MissingObjectException;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
 import org.eclipse.jgit.lib.Repository;
@@ -20,6 +20,7 @@ import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.util.RawParseUtils;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +38,7 @@ import java.util.List;
 @Service
 public class GitService {
 
-    private boolean FOLLOW_MERGED_COMMITS = false;
+    private boolean FOLLOW_RENAMED_FILES = true;
 
     private String projectRepositoryPath;
 
@@ -49,8 +50,16 @@ public class GitService {
     }
 
 
+    /**
+     * Returns the file commit history of the specified file. Tracking of renames depends on the value
+     * of FOLLOW_RENAMED_FILES variable.
+     *
+     * @param filePath       location of the file.
+     * @param subProjectName name of the sub-project (name of the repository).
+     * @return list of previous commits and file locations of the specified file.
+     */
     public List<CommitAndPathWrapper> getFileCommitHistory(String filePath, String subProjectName) {
-        if (FOLLOW_MERGED_COMMITS) {
+        if (FOLLOW_RENAMED_FILES) {
             return getFileCommitHistoryWithRenames(filePath, subProjectName);
         } else {
             List<CommitAndPathWrapper> result = new ArrayList<>();
@@ -61,16 +70,23 @@ public class GitService {
         }
     }
 
+    /**
+     * Returns the file commit history, but files are only tracked, until they haven't been renamed.
+     *
+     * @param filePath       location of the file.
+     * @param subProjectName name of the sub-project (name of the repository).
+     * @return list of previous commits and file locations of the specified file (no renames are tracked).
+     */
     private List<RevCommit> getFileCommitHistoryWithoutRenames(String filePath, String subProjectName) {
-        Iterable<RevCommit> logMsgs = null;
+        Iterable<RevCommit> logMsgs = new ArrayList<>();
 
         try {
             Git git = Git.open(new File(projectRepositoryPath + "/" + subProjectName));
             LogCommand log = git.log().addPath(filePath);
             logMsgs = log.call();
-        } catch (Exception e) {
-            //TODO: Handle Exceptions separately
-            System.out.println("no head exception : " + e);
+        } catch (Exception ex) {
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
 
         List<RevCommit> result = new ArrayList<>();
@@ -80,13 +96,16 @@ public class GitService {
     }
 
     /**
-     * Returns the result of a git log --follow -- < path >
+     * Returns the result of a git log --follow -- < path > command.
+     *
+     * @param filePath       location of the file.
+     * @param subProjectName name of the sub-project (name of the repository).
+     * @return list of all previous commits and file locations of the specified file.
      */
     private ArrayList<CommitAndPathWrapper> getFileCommitHistoryWithRenames(String filePath, String subProjectName) {
         ArrayList<CommitAndPathWrapper> commits = new ArrayList<CommitAndPathWrapper>();
         RevCommit start = null;
 
-        //TODO: reimplement git log --follow
         int maxRenames = 1;
         int renamesCounter = 0;
 
@@ -109,19 +128,25 @@ public class GitService {
                 renamesCounter++;
             }
             while ((filePath = getRenamedPath(start, filePath, git)) != null);
-        } catch (Exception e) {
-            //TODO: Handle Exceptions separately
-            System.out.println("no head exception : " + e);
+        } catch (Exception ex) {
+            logger.error(ex.getMessage());
+            throw new ReviewerRecommendationException(ex.getMessage());
         }
 
         return commits;
     }
 
     /**
-     * Checks for renames in history of a certain file. Returns null, if no rename was found.
-     * Can take some seconds, especially if nothing is found...
+     * Checks for renames in history of a certain file.
+     *
+     * @param start    head commit.
+     * @param filePath location of the file.
+     * @param git      git instance.
+     * @return null, if no rename was found, old file's name otherwise.
+     * @throws IOException     in case of problems with reading the repository.
+     * @throws GitAPIException in case of problems with reading the repository.
      */
-    private String getRenamedPath(RevCommit start, String filePath, Git git) throws IOException, MissingObjectException, GitAPIException {
+    private String getRenamedPath(RevCommit start, String filePath, Git git) throws IOException, GitAPIException {
         Iterable<RevCommit> allCommitsLater = git.log().add(start).call();
         for (RevCommit commit : allCommitsLater) {
 
@@ -129,7 +154,6 @@ public class GitService {
             tw.addTree(commit.getTree());
             tw.addTree(start.getTree());
             tw.setRecursive(true);
-            //tw.setFilter(TreeFilter.);
             RenameDetector rd = new RenameDetector(git.getRepository());
             rd.addAll(DiffEntry.scan(tw));
             List<DiffEntry> files = rd.compute();
@@ -137,7 +161,7 @@ public class GitService {
                 if ((diffEntry.getChangeType() == DiffEntry.ChangeType.RENAME ||
                         diffEntry.getChangeType() == DiffEntry.ChangeType.COPY) &&
                         diffEntry.getNewPath().contains(filePath)) {
-                    System.out.println("Found: " + diffEntry.toString() + " return " + diffEntry.getOldPath());
+                    logger.debug("Found: " + diffEntry.toString() + " return " + diffEntry.getOldPath());
                     return diffEntry.getOldPath();
                 }
             }
@@ -145,25 +169,18 @@ public class GitService {
         return null;
     }
 
-    public void printCommitListInfo(Iterable<RevCommit> logMsgs) {
-        int commitsCounter = 0;
-
-        for (RevCommit commit : logMsgs) {
-            commitsCounter++;
-            System.out.println("----------------------------------------");
-            System.out.println(commit);
-            System.out.println("Tree: " + commit.getTree());
-            System.out.println(commit.getAuthorIdent().getName());
-            System.out.println(commit.getAuthorIdent().getWhen());
-            System.out.println(" ---- " + commit.getFullMessage());
-            System.out.println("----------------------------------------");
-        }
-
-        System.out.println("Commits: " + commitsCounter);
-    }
-
+    /**
+     * Find list of changes of specified file between two particular commits.
+     *
+     * @param headCommit     head commit.
+     * @param diffWith       commit to be compared with head commit.
+     * @param filePath       location of the file.
+     * @param subProjectName name of the sub-project (name of the repository).
+     * @return list of changes.
+     * @throws IOException in case of problems with reading the repository.
+     */
     public EditList diff(RevCommit headCommit, RevCommit diffWith, String filePath, String subProjectName) throws IOException {
-        OutputStream outputStream = System.out; //DisabledOutputStream.INSTANCE;
+        OutputStream outputStream = DisabledOutputStream.INSTANCE;
         DiffFormatter formatter = new DiffFormatter(outputStream);
 
         Git git = Git.open(new File(projectRepositoryPath + "/" + subProjectName));
@@ -174,21 +191,26 @@ public class GitService {
         }
 
         List<DiffEntry> entries = formatter.scan(diffWith, headCommit);
-        //formatter.format(entries.get(0)); //to be deleted
         if (entries.size() > 0) {
             FileHeader fileHeader = formatter.toFileHeader(entries.get(0));
-            EditList edits = fileHeader.toEditList();
-
-            return edits;
+            return fileHeader.toEditList();
         } else {
             return new EditList();
         }
 
     }
 
+    /**
+     * Get the nearest line of code in the particular file at specific commit.
+     *
+     * @param headCommit     repository state to be checked.
+     * @param filePath       location of the file.
+     * @param lineNumber     number of the line to be checked.
+     * @param subProjectName name of the sub-project (name of the repository).
+     * @return nearest line of source code in the file.
+     * @throws IOException in case of problems with reading the repository.
+     */
     public int getNearestLineOfCode(RevCommit headCommit, String filePath, int lineNumber, String subProjectName) throws IOException {
-        //to be changed
-
         String[] lines;
         try {
             Git git = Git.open(new File(projectRepositoryPath + "/" + subProjectName));
@@ -217,9 +239,7 @@ public class GitService {
                 }
             }
         } catch (Exception ex) {
-            logger.error(ex.getMessage());
-
-            //solved by considering the line below as the nearest line
+            //consider the line below as the nearest line
             return lineNumber - 1;
         }
 

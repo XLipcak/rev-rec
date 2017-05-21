@@ -30,8 +30,11 @@ import java.util.*;
 @Service
 public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRecommendation {
 
+    // initial point received by code reviewers, who reviewed the most recent pull request of the line change history
     private static final int INITIAL_POINT = 1;
-    private static final double CONSTANT_FACTOR = 0.9;
+
+    // multiplication factor, which is used to disadvantage older commits
+    private static final double MULTIPLICATION_FACTOR = 0.9;
 
     private GitService gitService;
     private GerritService gerritService;
@@ -61,7 +64,10 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
             if (fileCommitHistory.size() == 1) {
                 continue;
             }
-            Set<Integer> lines = getLinesAffectedByCommit(fileCommitHistory.get(0).getRevCommit(), fileCommitHistory.get(1).getRevCommit(), filePath.getLocation(), pullRequest.getSubProject());
+            int commitIndex = getCommitIndex(fileCommitHistory, pullRequest.getChangeId());
+            Set<Integer> lines = getLinesAffectedByCommit(fileCommitHistory.get(commitIndex).getRevCommit(), fileCommitHistory.get(commitIndex + 1).getRevCommit(),
+                    filePath.getLocation(), pullRequest.getSubProject());
+            fileCommitHistory = fileCommitHistory.subList(commitIndex, fileCommitHistory.size());
             List<List<RevCommit>> lch = lineChangeHistory(lines, fileCommitHistory, pullRequest.getSubProject());
             for (int x = 0; x < lch.size(); x++) {
                 double points = getInitialPointForThisFile(filePath.getLocation());
@@ -72,7 +78,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                     } else {
                         resultMap.put(entry, points);
                     }
-                    points *= CONSTANT_FACTOR;
+                    points *= MULTIPLICATION_FACTOR;
                 }
             }
         }
@@ -96,7 +102,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
         Iterator it = pointsMap.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry pair = (Map.Entry) it.next();
-            for (AccountInfo user : getCodeReviewersOfCommit((RevCommit) pair.getKey())) {
+            for (AccountInfo user : getCodeReviewersAndOwnersOfCommit((RevCommit) pair.getKey())) {
                 if (reviewerCandidates.containsKey(user)) {
                     reviewerCandidates.replace(user, reviewerCandidates.get(user) + (Double) pair.getValue());
                 } else {
@@ -124,20 +130,20 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     }
 
     /**
-     * Get information about Gerrit accounts of users, who reviewed the pull request, where commit was included.
+     * Get information about Gerrit accounts of users, who reviewed or owned the pull request, where commit was included.
      *
      * @param commit commit, which was part of the pull request.
-     * @return information about Gerrit accounts of users, who reviewed the pull request.
-     * @throws RestApiException
+     * @return information about Gerrit accounts of users, who reviewed or owned the pull request.
+     * @throws RestApiException in case of problems with the communication via Gerrit REST API.
      */
-    private List<AccountInfo> getCodeReviewersOfCommit(RevCommit commit) {
+    private List<AccountInfo> getCodeReviewersAndOwnersOfCommit(RevCommit commit) {
         String changeId = getChangeIdFromFooter(commit.getFooterLines());
         if (changeId.equals("")) {
             return new ArrayList<>();
         }
 
         try {
-            return (List<AccountInfo>) gerritService.getReviewers(changeId, "Code-Review");
+            return (List<AccountInfo>) gerritService.getReviewersAndOwnersOfCommit(changeId, "Code-Review");
         } catch (RestApiException ex) {
             logger.error(ex.getMessage());
             throw new ReviewerRecommendationException(ex.getMessage());
@@ -185,7 +191,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                     }
                     if (x == fileCommitHistory.size() - 1) {
                         resultForActualLine.add(fileCommitHistory.get(x).getRevCommit());
-                        logger.info("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                        logger.debug("Line " + linesArray[index] + " was initialized in " + fileCommitHistory.get(x).getRevCommit().getName());
                         break;
                     }
                     if (!fileCommitHistory.get(x).getPath().equals(fileCommitHistory.get(x).getPath())) {
@@ -203,7 +209,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                         if (edit.getType() == Edit.Type.REPLACE) {
                             if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
                                 resultForActualLine.add(headCommit);
-                                logger.info("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.debug("Line " + linesArray[index] + " was replaced in " + fileCommitHistory.get(x).getRevCommit().getName());
                             }
                         }
 
@@ -211,13 +217,13 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
                             if (linesArray[index] + lineHistoryMatrix[index][x] >= edit.getBeginB() + 1 && linesArray[index] + lineHistoryMatrix[index][x] <= edit.getEndB()) {
                                 alreadyCheckedLines.get(x).add(actualLine);
                                 resultForActualLine.add(headCommit);
-                                logger.info("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.debug("Line " + linesArray[index] + " was inserted in " + fileCommitHistory.get(x).getRevCommit().getName());
                             }
                         }
 
                         if (edit.getType() == Edit.Type.DELETE) {
                             if (edit.getBeginA() < actualLine && actualLine <= edit.getEndA()) {
-                                logger.info("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getShortMessage());
+                                logger.debug("Line " + linesArray[index] + " was deleted in " + fileCommitHistory.get(x).getRevCommit().getName());
                             }
                         }
                     }
@@ -233,7 +239,7 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
     }
 
     /**
-     * Generate line history matrix: this matrix is used to track lines of file throughout its whole commit history.
+     * Generate the line history matrix: this matrix is used to track lines of file throughout its whole commit history.
      * The positions of every line can by changed by every commit and this matrix is used to track the positions of
      * particular lines in particular commits.
      *
@@ -418,5 +424,22 @@ public class ReviewBot extends ReviewerRecommendationBase implements ReviewerRec
             return "";
         }
         return commitFooter.get(0).getValue();
+    }
+
+    /**
+     * Find index of commit with changeId in the file change history.
+     *
+     * @param fileChangeHistory file change history of the file.
+     * @param changeId          change id of the commit.
+     * @return index of commit with specified change id in the line change history.
+     */
+    private Integer getCommitIndex(List<CommitAndPathWrapper> fileChangeHistory, String changeId) {
+        int x = 0;
+        for (CommitAndPathWrapper commitAndPathWrapper : fileChangeHistory) {
+            if (getChangeIdFromFooter(commitAndPathWrapper.getRevCommit().getFooterLines()).equals(changeId))
+                return x;
+            x++;
+        }
+        return 0;
     }
 }

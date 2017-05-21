@@ -23,8 +23,8 @@ public interface ReviewerRecommendation {
      * their relevance. The most relevant candidate is at the index 0, the least relevant candidate
      * is at the end of the list.
      *
-     * @param pullRequest PullRequest, for which we want to find appropriate code reviewers.
-     * @return Sorted list of recommended code reviewers.
+     * @param pullRequest pullRequest, for which we want to find appropriate code reviewers.
+     * @return sorted list of recommended code reviewers.
      */
     List<Developer> recommend(PullRequest pullRequest);
 

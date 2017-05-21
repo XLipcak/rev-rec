@@ -1,12 +1,12 @@
 package muni.fi.revrec;
 
-import com.google.gerrit.extensions.restapi.RestApiException;
 import muni.fi.revrec.common.GerritService;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
 import muni.fi.revrec.recommendation.bayesrec.BayesRec;
 import muni.fi.revrec.recommendation.revfinder.RevFinder;
+import muni.fi.revrec.recommendation.reviewbot.ReviewBot;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -40,28 +39,37 @@ public class InitialLoader implements CommandLineRunner {
     @Autowired
     private RevFinder revFinder;
 
+    @Autowired
+    private ReviewBot reviewBot;
+
     @Value("${recommendation.project}")
     private String project;
 
     @Override
     public void run(String... strings) throws Exception {
 
-        //testTechniqueRevFinder();
-        testTechniqueBayes();
 
-//        printLine("");
-//        ObjectMapper mapper = new ObjectMapper();
-//        List<PullRequest> pullRequests = pullRequestDAO.findByProjectNameOrderByTimeDesc(project);
-//        mapper.writeValue(new File("openstack.json"), pullRequests);
+        // run the evaluation of the RevFinder algorithm
+        //evaluateRevFinderAlgorithm();
+
+        // run the evaluation of the Naive Bayes-based recommendation algorithm
+        //evaluateBayesRecAlgorithm();
+
+        // example of recommendation using the RevFinder algorithm
+        revFinder.recommend(gerritService.getPullRequest("31353"));
+
+        // example of recommendation using the ReviewBot algorithm
+        //reviewBot.recommend(gerritService.getPullRequest("31353"));
+
+        // example of recommendation using the Naive Bayes-based recommendation algorithm
+        //bayesRec.buildModel();
+        //bayesRec.recommend(gerritService.getPullRequest("31353"));
     }
 
     /**
-     * Test RevFinder algorithm.
-     *
-     * @throws IOException
-     * @throws RestApiException
+     * Evaluate the RevFinder algorithm using the metrics Top-k Accuracy and Mean Reciprocal Rank.
      */
-    private void testTechniqueRevFinder() throws IOException, RestApiException {
+    private void evaluateRevFinderAlgorithm() {
 
         // init variables
         int top1Counter = 0;
@@ -130,7 +138,10 @@ public class InitialLoader implements CommandLineRunner {
         }
     }
 
-    private void testTechniqueBayes() throws IOException, RestApiException {
+    /**
+     * Evaluate the Naive Bayes-based recommendation algorithm using the metrics Top-k Accuracy and Mean Reciprocal Rank.
+     */
+    private void evaluateBayesRecAlgorithm() {
 
         // init variables
         int top1Counter = 0;
@@ -222,7 +233,7 @@ public class InitialLoader implements CommandLineRunner {
     }
 
     private void printLine(String text) {
-        System.out.println(text);
-        //logger.info(project + " " + text);
+        //System.out.println(text);
+        logger.info(project + " " + text);
     }
 }

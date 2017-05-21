@@ -39,14 +39,14 @@ public class GerritService {
     }
 
     /**
-     * Get accounts, who labeled the pull request with specified changeId.
+     * Get accounts, who labeled the pull request with specified changeId or owned it.
      *
      * @param changeId Gerrit changeId of the pull request.
      * @param label    label value.
-     * @return list of accounts, who labeled the given pull request with the specified label.
+     * @return list of accounts, who labeled the given pull request with the specified label or owned it.
      * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
      */
-    public Collection<AccountInfo> getReviewers(String changeId, String label) throws RestApiException {
+    public Collection<AccountInfo> getReviewersAndOwnersOfCommit(String changeId, String label) throws RestApiException {
         ChangeInfo changeInfo = null;
         try {
             changeInfo = getChange(changeId);
@@ -54,18 +54,18 @@ public class GerritService {
             logger.error(ex.getMessage());
             throw new ReviewerRecommendationException(ex.getMessage());
         }
-        return getReviewers(changeInfo, label);
+        return getReviewersAndOwnersOfCommit(changeInfo, label);
     }
 
     /**
-     * Get accounts, who labeled the given changeInfo.
+     * Get accounts, who labeled the given changeInfo or owned it.
      *
      * @param changeInfo changeInfo representing the Gerrit pull request.
      * @param label      label value.
-     * @return list of accounts, who labeled the given pull request with the specified label.
+     * @return list of accounts, who labeled the given pull request with the specified label or owned it.
      * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
      */
-    public Collection<AccountInfo> getReviewers(ChangeInfo changeInfo, String label) throws RestApiException {
+    public Collection<AccountInfo> getReviewersAndOwnersOfCommit(ChangeInfo changeInfo, String label) throws RestApiException {
         if (changeInfo == null) {
             return new ArrayList<>();
         }
@@ -85,7 +85,7 @@ public class GerritService {
                     result.add(accountInfo);
                 }
             }
-
+            result.add(changeInfo.owner);
             return result;
         } catch (NoSuchElementException | IllegalArgumentException ex) {
             logger.error(ex.getMessage());
@@ -155,7 +155,7 @@ public class GerritService {
         //dependent on Gerrit instance
         //ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
 
-        List<ChangeInfo> changeInfos = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS).get();
+        List<ChangeInfo> changeInfos = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS).withOption(ListChangesOption.DETAILED_LABELS).get();
         if (changeInfos.size() > 0) {
             return changeInfos.get(0);
         } else {
@@ -167,7 +167,7 @@ public class GerritService {
      * Get pull request from gerritChangeNumber.
      *
      * @param gerritChangeNumber change number of the pull request in Gerrit.
-     * @return pullRequest object containing timestamp, file paths, sub-project name
+     * @return pullRequest object containing timestamp, changeId, file paths, sub-project name
      * and owner information of the pull request with gerritChangeNumber.
      */
     public PullRequest getPullRequest(String gerritChangeNumber) {
@@ -180,6 +180,7 @@ public class GerritService {
             pullRequest.setFilePaths(result);
             pullRequest.setSubProject(changeInfo.project);
             pullRequest.setOwner(new Developer(changeInfo.owner));
+            pullRequest.setChangeId(changeInfo.changeId);
 
             return pullRequest;
         } catch (RestApiException ex) {

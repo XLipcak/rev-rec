@@ -12,25 +12,15 @@ import java.util.List;
 @Transactional
 public interface PullRequestDAO extends CrudRepository<PullRequest, Long> {
 
-    List<PullRequest> findByTimestampLessThanAndProjectName(Long timestamp, String name);
-
-    List<PullRequest> findByChangeIdAndProjectName(String changeId, String name);
-
-    List<PullRequest> findByChangeNumber(Integer changeNumber);
-
     List<PullRequest> findByReviewerAndTimestampLessThanAndTimestampGreaterThanAndProjectName(Developer reviewer, Long timestamp1, Long timestamp2, String name);
 
     List<PullRequest> findByProjectNameAndTimestampLessThan(String name, Long timestamp);
-
-    List<PullRequest> findByProjectName(String name);
 
     List<PullRequest> findByProjectNameOrderByTimestampDesc(String name);
 
     Long countByReviewerAndProjectNameAndTimestampLessThan(Developer reviewer, String project, Long timestamp);
 
     Long countByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(String project, String subProject, Developer reviewer, Long timestamp);
-
-    List<PullRequest> findByProjectNameAndSubProjectAndTimestampLessThan(String project, String subProject, Long timestamp);
 
     List<PullRequest> findByProjectNameAndReviewerAndTimestampLessThan(String project, Developer reviewer, Long time1);
 
