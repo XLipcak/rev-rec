@@ -1,7 +1,7 @@
 package muni.fi.revrec.common.exception;
 
 /**
- * Created by Kubo on 8.5.2017.
+ * @author Jakub Lipcak, Masaryk University
  */
 public class ReviewerRecommendationException extends RuntimeException {
 

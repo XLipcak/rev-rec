@@ -152,10 +152,8 @@ public class GerritService {
      * @throws RestApiException if there is a problem with the communication via Gerrit REST API.
      */
     public ChangeInfo getChange(String changeId) throws RestApiException {
-        //dependent on Gerrit instance
-        //ChangeInfo changeInfo = gerritApi.changes().id(changeId).get();
-
-        List<ChangeInfo> changeInfos = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS).withOption(ListChangesOption.DETAILED_LABELS).get();
+        List<ChangeInfo> changeInfos = gerritApi.changes().query(changeId).withOption(ListChangesOption.DETAILED_ACCOUNTS)
+                .withOption(ListChangesOption.DETAILED_LABELS).get();
         if (changeInfos.size() > 0) {
             return changeInfos.get(0);
         } else {

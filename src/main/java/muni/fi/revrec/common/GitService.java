@@ -38,6 +38,7 @@ import java.util.List;
 @Service
 public class GitService {
 
+    //set, whether renamed files should be tracked in their git history => it can be slow to track them
     private boolean FOLLOW_RENAMED_FILES = true;
 
     private String projectRepositoryPath;
