@@ -8,8 +8,9 @@ This project deals with optimal recommendations of source code reviewers for ope
 #### or
 
 * * Download and install the [MySql Server](https://dev.mysql.com/downloads/mysql/).
+  * Create 3 schemas: <i>android</i>, <i>openstack</i> and <i>qt</i>.
   * Import the data from our [import scripts](https://github.com/XLipcak/rev-rec/tree/master/data/sql).
-  * Set the database settings in the <i>application.properties</i> 
+  * Set your database connection settings in the <i>application.properties</i> 
 
 ## Build and Run:
 #### The aplication has the following requirements:
