@@ -1,5 +1,6 @@
 package muni.fi.revrec;
 
+import muni.fi.revrec.common.DataLoader;
 import muni.fi.revrec.common.GerritService;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
@@ -42,12 +43,16 @@ public class InitialLoader implements CommandLineRunner {
     @Autowired
     private ReviewBot reviewBot;
 
+    @Autowired
+    DataLoader dataLoader;
+
     @Value("${recommendation.project}")
     private String project;
 
     @Override
     public void run(String... strings) throws Exception {
 
+        dataLoader.test();
 
         /* run the evaluation of the RevFinder algorithm */
         //evaluateRevFinderAlgorithm();
@@ -56,7 +61,7 @@ public class InitialLoader implements CommandLineRunner {
         //evaluateBayesRecAlgorithm();
 
         /* example of recommendation using the RevFinder algorithm */
-        revFinder.recommend(gerritService.getPullRequest("31353"));
+        //revFinder.recommend(gerritService.getPullRequest("31353"));
 
         /* example of recommendation using the Naive Bayes-based recommendation algorithm */
         //bayesRec.buildModel();
