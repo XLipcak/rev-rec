@@ -1,13 +1,16 @@
 package muni.fi.revrec.common;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.filePath.FilePathDAO;
 import muni.fi.revrec.model.project.ProjectDAO;
+import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.ReviewerDAO;
 import org.apache.commons.logging.Log;
@@ -15,6 +18,11 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This class is used to load data from different sources and stores them in the database.
@@ -42,13 +50,14 @@ public class DataLoader {
     private String gerritUrl;
 
     public void test() throws UnirestException {
+        int start = 9893;
         int iteration = 0;
-        int totalPullsInOneRequest = 500;
+        int totalPullsInOneRequest = 100;
         int processedPullRequests = 0;
         try {
             do {
                 HttpResponse<String> jsonResponse = Unirest.get(gerritUrl + "/changes/")
-                        .queryString("start", String.valueOf(iteration * totalPullsInOneRequest))
+                        .queryString("start", String.valueOf((iteration * totalPullsInOneRequest) + start))
                         .queryString("n", totalPullsInOneRequest)
                         .queryString("q", "status:merged")
                         .queryString("o", "LABELS")
@@ -60,9 +69,10 @@ public class DataLoader {
                 String json = jsonResponse.getBody().substring(5);
 
                 for (int x = 0; x < totalPullsInOneRequest; x++) {
-                    processedPullRequests = (iteration * totalPullsInOneRequest) + x;
+                    processedPullRequests = (iteration * totalPullsInOneRequest) + x + start;
                     JsonObject jsonObject = ((JsonArray) new JsonParser().parse(json)).get(x).getAsJsonObject();
                     System.out.println(processedPullRequests + " : " + jsonObject.get("id").getAsString());
+                    PullRequest pullRequest = parse(jsonObject);
                 }
                 iteration++;
             } while (true);
@@ -71,6 +81,17 @@ public class DataLoader {
             logger.error(ex);
         }
 
+    }
+
+    public PullRequest parse(JsonObject jsonObject) {
+        Set<FilePath> filePaths = new HashSet<>();
+        PullRequest pullRequest = new PullRequest();
+        Map<String,Object> map = new HashMap<String,Object>();
+        map = new Gson().fromJson(jsonObject.get("revisions").getAsJsonObject().get(jsonObject.get("current_revision").getAsString()).getAsJsonObject().get("files"), map.getClass());
+        for(String file : map.keySet()){
+            System.out.println(file);
+        }
+        return pullRequest;
     }
 /*
 https://git.eclipse.org/r/changes/?q=109889&o=CURRENT_REVISION&o=CURRENT_COMMIT&o=CURRENT_FILES
