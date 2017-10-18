@@ -13,6 +13,7 @@ public class Developer {
     @Id
     private Integer id;
 
+    private String accountId;
     private String email;
     private String name;
     private String avatar;
@@ -27,11 +28,6 @@ public class Developer {
         if (accountInfo.avatars != null && accountInfo.avatars.size() > 0) {
             this.avatar = accountInfo.avatars.get(0).url;
         }
-    }
-
-    public Developer(String email, String name) {
-        this.email = email;
-        this.name = name;
     }
 
     public String getEmail() {
@@ -66,23 +62,35 @@ public class Developer {
         this.avatar = avatar;
     }
 
+    public String getAccountId() {
+        return accountId;
+    }
+
+    public void setAccountId(String accountId) {
+        this.accountId = accountId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        Developer reviewer = (Developer) o;
+        Developer developer = (Developer) o;
 
-        if (!id.equals(reviewer.id)) return false;
-        if (email != null ? !email.equals(reviewer.email) : reviewer.email != null) return false;
-        return name != null ? name.equals(reviewer.name) : reviewer.name == null;
+        if (id != null ? !id.equals(developer.id) : developer.id != null) return false;
+        if (accountId != null ? !accountId.equals(developer.accountId) : developer.accountId != null) return false;
+        if (email != null ? !email.equals(developer.email) : developer.email != null) return false;
+        if (name != null ? !name.equals(developer.name) : developer.name != null) return false;
+        return avatar != null ? avatar.equals(developer.avatar) : developer.avatar == null;
     }
 
     @Override
     public int hashCode() {
-        int result = id.hashCode();
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (accountId != null ? accountId.hashCode() : 0);
         result = 31 * result + (email != null ? email.hashCode() : 0);
         result = 31 * result + (name != null ? name.hashCode() : 0);
+        result = 31 * result + (avatar != null ? avatar.hashCode() : 0);
         return result;
     }
 }

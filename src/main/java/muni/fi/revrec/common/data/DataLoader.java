@@ -1,28 +1,22 @@
-package muni.fi.revrec.common;
+package muni.fi.revrec.common.data;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
-import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.filePath.FilePathDAO;
 import muni.fi.revrec.model.project.ProjectDAO;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
-import muni.fi.revrec.model.reviewer.ReviewerDAO;
+import muni.fi.revrec.model.reviewer.Developer;
+import muni.fi.revrec.model.reviewer.DeveloperDAO;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * This class is used to load data from different sources and stores them in the database.
@@ -35,6 +29,9 @@ public class DataLoader {
     private final Log logger = LogFactory.getLog(this.getClass());
 
     @Autowired
+    private GerritPullRequestParser gerritPullRequestProcessor;
+
+    @Autowired
     private ProjectDAO projectDAO;
 
     @Autowired
@@ -44,7 +41,10 @@ public class DataLoader {
     private PullRequestDAO pullRequestDAO;
 
     @Autowired
-    private ReviewerDAO reviewerDAO;
+    private DeveloperDAO developerDAO;
+
+    @Value("${recommendation.project}")
+    private String project;
 
     @Value("${gerrit.url}")
     private String gerritUrl;
@@ -78,20 +78,32 @@ public class DataLoader {
             } while (true);
         } catch (Exception ex) {
             logger.info("Processed pull requests: " + processedPullRequests);
-            logger.error(ex);
+            logger.error(ex); //com.mashape.unirest.http.exceptions.UnirestException: java.net.SocketTimeoutException: Read timed out
         }
 
     }
 
     public PullRequest parse(JsonObject jsonObject) {
-        Set<FilePath> filePaths = new HashSet<>();
         PullRequest pullRequest = new PullRequest();
-        Map<String,Object> map = new HashMap<String,Object>();
-        map = new Gson().fromJson(jsonObject.get("revisions").getAsJsonObject().get(jsonObject.get("current_revision").getAsString()).getAsJsonObject().get("files"), map.getClass());
-        for(String file : map.keySet()){
-            System.out.println(file);
-        }
+
+        gerritPullRequestProcessor.setJsonObject(jsonObject);
+
+        //gerritPullRequestProcessor.getFilePaths();
+        System.out.println(gerritPullRequestProcessor.getChangeId());
+        System.out.println(gerritPullRequestProcessor.getChangeNumber());
+        System.out.println(gerritPullRequestProcessor.getOwner());
+        System.out.println(gerritPullRequestProcessor.getSubProject());
+        System.out.println(gerritPullRequestProcessor.getTimeStamp());
+        System.out.println(project);
+        System.out.println(gerritPullRequestProcessor.getInsertions());
+        System.out.println(gerritPullRequestProcessor.getDeletions());
+
         return pullRequest;
+    }
+
+
+    private Developer processDeveloper(){
+        return null;
     }
 /*
 https://git.eclipse.org/r/changes/?q=109889&o=CURRENT_REVISION&o=CURRENT_COMMIT&o=CURRENT_FILES
@@ -272,19 +284,19 @@ https://android-review.googlesource.com/changes/499912/?o=DETAILED_LABELS
 //        if (changeInfo.reviewers != null) {
 //            allReviewers = new HashSet<>();
 //            for (AccountInfo accountInfo : changeInfo.reviewers.values().iterator().next()) {
-//                Developer reviewer = reviewerDAO.findOne(accountInfo._accountId);
+//                Developer reviewer = developerDAO.findOne(accountInfo._accountId);
 //                if (reviewer == null) {
 //                    reviewer = new Developer(accountInfo);
-//                    reviewerDAO.save(reviewer);
+//                    developerDAO.save(reviewer);
 //                }
 //                allReviewers.add(reviewer);
 //            }
 //        }
 //
-//        Developer owner = reviewerDAO.findOne(changeInfo.owner._accountId);
+//        Developer owner = developerDAO.findOne(changeInfo.owner._accountId);
 //        if (owner == null) {
 //            owner = new Developer(changeInfo.owner);
-//            owner = reviewerDAO.save(owner);
+//            owner = developerDAO.save(owner);
 //        }
 //
 //        PullRequest pullRequest = new PullRequest();
@@ -324,7 +336,7 @@ https://android-review.googlesource.com/changes/499912/?o=DETAILED_LABELS
 //        Set<Developer> reviewers = new HashSet<>();
 //        for (int i = 0; i < arr.length(); i++) {
 //            Integer reviewerId = ((Integer) ((JSONObject) arr.get(i)).get("userId"));
-//            Developer reviewer = reviewerDAO.findOne(reviewerId);
+//            Developer reviewer = developerDAO.findOne(reviewerId);
 //            if (reviewer == null) {
 //                AccountInfo accountInfo = gerritBrowser.getAccount(reviewerId.toString());
 //                Developer newReviewer = new Developer();
@@ -334,7 +346,7 @@ https://android-review.googlesource.com/changes/499912/?o=DETAILED_LABELS
 //                if (accountInfo.avatars != null && accountInfo.avatars.size() > 0) {
 //                    newReviewer.setAvatar(accountInfo.avatars.get(0).url);
 //                }
-//                reviewer = reviewerDAO.save(newReviewer);
+//                reviewer = developerDAO.save(newReviewer);
 //            }
 //            reviewers.add(reviewer);
 //        }
@@ -346,9 +358,9 @@ https://android-review.googlesource.com/changes/499912/?o=DETAILED_LABELS
 //        Set<Developer> result = new HashSet<>();
 //        for (AccountInfo accountInfo : accountInfos) {
 //            if (accountInfo != null) {
-//                Developer reviewer = reviewerDAO.findOne(accountInfo._accountId);
+//                Developer reviewer = developerDAO.findOne(accountInfo._accountId);
 //                if (reviewer == null) {
-//                    reviewer = reviewerDAO.save(new Developer(accountInfo));
+//                    reviewer = developerDAO.save(new Developer(accountInfo));
 //                }
 //                result.add(reviewer);
 //            }
