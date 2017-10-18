@@ -1,6 +1,6 @@
 package muni.fi.revrec;
 
-import muni.fi.revrec.common.DataLoader;
+import muni.fi.revrec.common.data.DataLoader;
 import muni.fi.revrec.common.GerritService;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
