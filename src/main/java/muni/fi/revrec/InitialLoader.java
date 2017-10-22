@@ -52,10 +52,10 @@ public class InitialLoader implements CommandLineRunner {
     @Override
     public void run(String... strings) throws Exception {
 
-        //dataLoader.fetchData();
+        dataLoader.fetchData();
 
         /* run the evaluation of the RevFinder algorithm */
-        evaluateRevFinderAlgorithm();
+        //evaluateRevFinderAlgorithm();
 
         /* run the evaluation of the Naive Bayes-based recommendation algorithm */
         //evaluateBayesRecAlgorithm();

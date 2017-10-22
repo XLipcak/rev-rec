@@ -1,5 +1,6 @@
 package muni.fi.revrec.common.data;
 
+import com.google.gson.JsonObject;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.reviewer.Developer;
 
@@ -21,7 +22,5 @@ public interface PullRequestParser {
 
     Long getTimeStamp();
 
-    Integer getInsertions();
-
-    Integer getDeletions();
+    void setJsonObject(JsonObject jsonObject);
 }

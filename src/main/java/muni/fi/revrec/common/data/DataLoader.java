@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
+import muni.fi.revrec.common.exception.ReviewerRecommendationException;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.filePath.FilePathDAO;
 import muni.fi.revrec.model.project.Project;
@@ -37,6 +38,9 @@ public class DataLoader {
     private GerritPullRequestParser gerritPullRequestParser;
 
     @Autowired
+    private GitHubPullRequestParser gitHubPullRequestParser;
+
+    @Autowired
     private ProjectDAO projectDAO;
 
     @Autowired
@@ -56,6 +60,7 @@ public class DataLoader {
 
     public void fetchData() throws UnirestException {
         Project project = createIfNotExist(projectName);
+        boolean isGit = projectUrl.contains("github");
 
         int start = 0;
         int iteration = 0;
@@ -63,31 +68,56 @@ public class DataLoader {
         int processedPullRequests = 0;
         try {
             do {
-                HttpResponse<String> jsonResponse = Unirest.get(projectUrl + "/changes/")
-                        .queryString("start", String.valueOf((iteration * totalPullsInOneRequest) + start))
-                        .queryString("n", totalPullsInOneRequest)
-                        .queryString("q", "status:merged")
-                        .queryString("o", "DETAILED_LABELS")
-                        .queryString("o", "DETAILED_ACCOUNTS")
-                        .queryString("o", "CURRENT_REVISION")
-                        .queryString("o", "CURRENT_COMMIT")
-                        .queryString("o", "CURRENT_FILES")
-                        .asString();
-                String json = jsonResponse.getBody().substring(5);
+                String json = "";
+                PullRequestParser pullRequestParser;
 
-                for (int x = 0; x < totalPullsInOneRequest; x++) {
+                if (isGit) {
+                    HttpResponse<String> jsonResponse = Unirest.get(projectUrl + "/pulls")
+                            .queryString("state", "closed")
+                            .queryString("page", iteration + 1)
+                            .asString();
+                    json = jsonResponse.getBody();
+                    pullRequestParser = gitHubPullRequestParser;
+                } else {
+                    HttpResponse<String> jsonResponse = Unirest.get(projectUrl + "/changes/")
+                            .queryString("start", String.valueOf((iteration * totalPullsInOneRequest) + start))
+                            .queryString("n", totalPullsInOneRequest)
+                            .queryString("q", "status:merged")
+                            .queryString("o", "DETAILED_LABELS")
+                            .queryString("o", "DETAILED_ACCOUNTS")
+                            .queryString("o", "CURRENT_REVISION")
+                            .queryString("o", "CURRENT_COMMIT")
+                            .queryString("o", "CURRENT_FILES")
+                            .asString();
+                    json = jsonResponse.getBody().substring(5);
+                    pullRequestParser = gerritPullRequestParser;
+                }
+
+                for (int x = 0; x < (isGit ? 30 : totalPullsInOneRequest); x++) {
+                    System.out.println(x);
+
                     processedPullRequests = (iteration * totalPullsInOneRequest) + x + start;
-                    JsonObject jsonObject = ((JsonArray) new JsonParser().parse(json)).get(x).getAsJsonObject();
+                    JsonObject jsonObject = null;
+                    if (isGit) {
+                        jsonObject = new JsonParser().parse(getGithubPullRequestDetail(
+                                ((JsonObject) ((JsonArray) new JsonParser().parse(json)).get(x)).get("number").getAsString())).getAsJsonObject();
+                        if (jsonObject.get("merged_by").isJsonNull()) {
+                            System.out.println("not merged");
+                            continue;
+                        }
+                    } else {
+                        jsonObject = ((JsonArray) new JsonParser().parse(json)).get(x).getAsJsonObject();
+                    }
 
-                    System.out.println(processedPullRequests + " : " + jsonObject.get("id").getAsString());
+                    System.out.println(processedPullRequests);
 
-                    gerritPullRequestParser.setJsonObject(jsonObject);
-                    process(jsonObject, gerritPullRequestParser, project);
+                    pullRequestParser.setJsonObject(jsonObject);
+                    process(jsonObject, pullRequestParser, project);
                 }
                 iteration++;
 
             } while (true);
-        } catch (Exception ex) {
+        } catch (ReviewerRecommendationException ex) {
             logger.info("Processed pull requests: " + processedPullRequests);
             logger.error(ex.getMessage());
         }
@@ -106,10 +136,10 @@ public class DataLoader {
                 pullRequest.setSubProject(pullRequestParser.getSubProject());
                 pullRequest.setTimestamp(pullRequestParser.getTimeStamp());
                 pullRequest.setOwner(createIfNotExist(pullRequestParser.getOwner()));
-                pullRequest.setInsertions(pullRequestParser.getInsertions());
-                pullRequest.setDeletions(pullRequestParser.getDeletions());
                 pullRequest.setProject(project);
                 pullRequest.setReviewers(createIfNotExist(pullRequestParser.getReviewers()));
+            } else {
+                return null;
             }
         } catch (Exception ex) {
             logger.error("Parsing exception: " + ex.getMessage());
@@ -158,6 +188,12 @@ public class DataLoader {
             result.add(filePathDAO.save(filePath));
         }
         return result;
+    }
+
+    private String getGithubPullRequestDetail(String number) throws UnirestException {
+        HttpResponse<String> jsonResponse = Unirest.get(projectUrl + "/pulls/" + number)
+                .asString();
+        return jsonResponse.getBody();
     }
 }
 

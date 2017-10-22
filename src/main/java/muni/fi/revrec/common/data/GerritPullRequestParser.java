@@ -76,16 +76,6 @@ public class GerritPullRequestParser implements PullRequestParser {
     }
 
     @Override
-    public Integer getInsertions() {
-        return jsonObject.get("insertions").getAsInt();
-    }
-
-    @Override
-    public Integer getDeletions() {
-        return jsonObject.get("deletions").getAsInt();
-    }
-
-    @Override
     public Set<Developer> getReviewers() {
         Set<Developer> result = new HashSet<>();
         JsonArray reviewers = ((JsonArray) ((JsonObject) ((JsonObject) jsonObject.get("labels")).get("Code-Review")).get("all"));
@@ -111,6 +101,7 @@ public class GerritPullRequestParser implements PullRequestParser {
         return jsonObject;
     }
 
+    @Override
     public void setJsonObject(JsonObject jsonObject) {
         this.jsonObject = jsonObject;
     }

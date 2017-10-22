@@ -27,9 +27,6 @@ public class PullRequest {
     private Integer changeNumber;
     private Long timestamp;
 
-    private Integer insertions;
-    private Integer deletions;
-
     @JoinTable(name = "review")
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Developer> reviewers;
@@ -89,22 +86,6 @@ public class PullRequest {
 
     public void setTimestamp(Long time) {
         this.timestamp = time;
-    }
-
-    public Integer getInsertions() {
-        return insertions;
-    }
-
-    public void setInsertions(Integer insertions) {
-        this.insertions = insertions;
-    }
-
-    public Integer getDeletions() {
-        return deletions;
-    }
-
-    public void setDeletions(Integer deletions) {
-        this.deletions = deletions;
     }
 
     public Set<Developer> getReviewers() {
