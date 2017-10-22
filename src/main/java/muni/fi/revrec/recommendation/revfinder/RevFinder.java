@@ -84,7 +84,7 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
                     score = 0;
                 }
 
-                for (Developer codeReviewer : rev.getReviewer()) {
+                for (Developer codeReviewer : rev.getReviewers()) {
                     if (reviewerCandidates.get(stringComparisonTechnique).containsKey(codeReviewer)) {
                         reviewerCandidates.get(stringComparisonTechnique)
                                 .replace(codeReviewer,

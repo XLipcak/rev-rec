@@ -1,6 +1,7 @@
 package muni.fi.revrec.common.data;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import muni.fi.revrec.model.filePath.FilePath;
@@ -37,7 +38,7 @@ public class GerritPullRequestParser implements PullRequestParser {
         for (String file : map.keySet()) {
             FilePath filePath = new FilePath();
             filePath.setLocation(file);
-            System.out.println(file);
+            result.add(filePath);
         }
 
         return result;
@@ -82,6 +83,19 @@ public class GerritPullRequestParser implements PullRequestParser {
     @Override
     public Integer getDeletions() {
         return jsonObject.get("deletions").getAsInt();
+    }
+
+    @Override
+    public Set<Developer> getReviewers() {
+        Set<Developer> result = new HashSet<>();
+        JsonArray reviewers = ((JsonArray) ((JsonObject) ((JsonObject) jsonObject.get("labels")).get("Code-Review")).get("all"));
+        for (JsonElement jsonElement : reviewers) {
+            int value = ((JsonObject) jsonElement).get("value").getAsInt();
+            if (value > 0) {
+                result.add(parseDeveloper(jsonElement));
+            }
+        }
+        return result;
     }
 
     private Developer parseDeveloper(JsonElement jsonElement) {

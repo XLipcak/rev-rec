@@ -52,10 +52,10 @@ public class InitialLoader implements CommandLineRunner {
     @Override
     public void run(String... strings) throws Exception {
 
-        dataLoader.test();
+        //dataLoader.fetchData();
 
         /* run the evaluation of the RevFinder algorithm */
-        //evaluateRevFinderAlgorithm();
+        evaluateRevFinderAlgorithm();
 
         /* run the evaluation of the Naive Bayes-based recommendation algorithm */
         //evaluateBayesRecAlgorithm();
@@ -104,7 +104,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-1 accuracy
             for (int x = 0; x < 1 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top1Counter++;
                     break;
                 }
@@ -112,7 +112,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-3 accuracy
             for (int x = 0; x < 3 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top3Counter++;
                     break;
                 }
@@ -120,7 +120,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-5 accuracy
             for (int x = 0; x < 5 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top5Counter++;
                     break;
                 }
@@ -128,7 +128,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-10 accuracy
             for (int x = 0; x < 10 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top10Counter++;
                     break;
                 }
@@ -136,7 +136,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Mean Reciprocal Rank
             for (int x = 0; x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     mrrValue += 1d / (x + 1);
                     break;
                 }
@@ -179,7 +179,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-1 accuracy
             for (int x = 0; x < 1 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top1Counter++;
                     break;
                 }
@@ -187,7 +187,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-3 accuracy
             for (int x = 0; x < 3 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top3Counter++;
                     break;
                 }
@@ -195,7 +195,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-5 accuracy
             for (int x = 0; x < 5 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top5Counter++;
                     break;
                 }
@@ -203,7 +203,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Top-10 accuracy
             for (int x = 0; x < 10 && x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     top10Counter++;
                     break;
                 }
@@ -211,7 +211,7 @@ public class InitialLoader implements CommandLineRunner {
 
             // Mean Reciprocal Rank
             for (int x = 0; x < reviewers.size(); x++) {
-                if (pullRequest.getReviewer().contains(reviewers.get(x))) {
+                if (pullRequest.getReviewers().contains(reviewers.get(x))) {
                     mrrValue += 1d / (x + 1);
                     break;
                 }
@@ -241,7 +241,7 @@ public class InitialLoader implements CommandLineRunner {
     }
 
     private void printLine(String text) {
-        //System.out.println(text);
-        logger.info(project + " " + text);
+        System.out.println(text);
+        //logger.info(project + " " + text);
     }
 }

@@ -112,7 +112,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         double allReviewersSize = (double) pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp).size();
         for (Developer reviewer : allReviewers) {
             reviewersOutcomes[index] = reviewer.getId().toString();
-            reviewersProbabilities[index] = ((double) (pullRequestDAO.countByReviewerAndProjectNameAndTimestampLessThan(reviewer, project, timestamp)) / allReviewersSize);
+            reviewersProbabilities[index] = ((double) (pullRequestDAO.countByReviewersAndProjectNameAndTimestampLessThan(reviewer, project, timestamp)) / allReviewersSize);
             index++;
             logger.info(index + "/" + reviewersProbabilities.length);
         }
@@ -144,9 +144,9 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         }
 
         for (Developer reviewer : allReviewers) {
-            double denumeratorSize = (double) pullRequestDAO.findByProjectNameAndReviewerAndTimestampLessThan(project, reviewer, timestamp).size();
+            double denumeratorSize = (double) pullRequestDAO.findByProjectNameAndReviewersAndTimestampLessThan(project, reviewer, timestamp).size();
             for (String subProject : subProjectsArray) {
-                subProjectProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndSubProjectAndReviewerAndTimestampLessThan(project, subProject, reviewer, timestamp) /
+                subProjectProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndSubProjectAndReviewersAndTimestampLessThan(project, subProject, reviewer, timestamp) /
                         denumeratorSize);
                 index++;
                 logger.info(index + "/" + subProjectProbabilities.length);
@@ -181,9 +181,9 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         }
         double[] ownerNodeProbabilities = new double[allReviewers.size() * allOwners.size()];
         for (Developer reviewer : allReviewers) {
-            double denumeratorSize = (double) (pullRequestDAO.findByProjectNameAndReviewerAndTimestampLessThan(project, reviewer, timestamp).size());
+            double denumeratorSize = (double) (pullRequestDAO.findByProjectNameAndReviewersAndTimestampLessThan(project, reviewer, timestamp).size());
             for (Developer owner : allOwners) {
-                ownerNodeProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndReviewerAndOwnerAndTimestampLessThan(project,
+                ownerNodeProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndReviewersAndOwnerAndTimestampLessThan(project,
                         reviewer, owner, timestamp)) / denumeratorSize;
                 index++;
                 logger.info(index + "/" + ownerNodeProbabilities.length);
@@ -213,10 +213,10 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         String[] filePathNodeOutcomes = allFilePaths.toArray(new String[allFilePaths.size()]);
         double[] filePathNodeProbabilities = new double[allReviewers.size() * allFilePaths.size()];
         for (Developer reviewer : allReviewers) {
-            double denumeratorSize = (double) filePathDAO.findByPullRequestProjectNameAndPullRequestReviewerAndPullRequestTimestampLessThan(project, reviewer, timestamp).size();
+            double denumeratorSize = (double) filePathDAO.findByPullRequestProjectNameAndPullRequestReviewersAndPullRequestTimestampLessThan(project, reviewer, timestamp).size();
             for (String filePath : filePathNodeOutcomes) {
                 filePathNodeProbabilities[index] =
-                        ((double) filePathDAO.countByPullRequestProjectNameAndLocationAndPullRequestReviewerAndPullRequestTimestampLessThan(project,
+                        ((double) filePathDAO.countByPullRequestProjectNameAndLocationAndPullRequestReviewersAndPullRequestTimestampLessThan(project,
                                 filePath, reviewer, timestamp)) / denumeratorSize;
                 index++;
                 logger.info(index + "/" + filePathNodeProbabilities.length);
@@ -317,7 +317,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         Set<Developer> allReviewers = new HashSet<>();
 
         for (PullRequest pullRequest : pullRequestDAO.findByProjectNameAndTimestampLessThan(project, timestamp)) {
-            allReviewers.addAll(pullRequest.getReviewer());
+            allReviewers.addAll(pullRequest.getReviewers());
         }
 
         return new ArrayList<>(allReviewers);

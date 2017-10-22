@@ -3,6 +3,7 @@ package muni.fi.revrec.common.data;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.reviewer.Developer;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class GitHubPullRequestParser implements PullRequestParser {
@@ -44,5 +45,10 @@ public class GitHubPullRequestParser implements PullRequestParser {
     @Override
     public Integer getDeletions() {
         return null;
+    }
+
+    @Override
+    public Set<Developer> getReviewers() {
+        return new HashSet<>();
     }
 }

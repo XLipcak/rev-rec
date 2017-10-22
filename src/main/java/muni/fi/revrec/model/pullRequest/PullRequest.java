@@ -32,7 +32,7 @@ public class PullRequest {
 
     @JoinTable(name = "review")
     @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Developer> reviewer;
+    private Set<Developer> reviewers;
 
     @OneToOne(fetch = FetchType.EAGER)
     private Developer owner;
@@ -107,12 +107,12 @@ public class PullRequest {
         this.deletions = deletions;
     }
 
-    public Set<Developer> getReviewer() {
-        return reviewer;
+    public Set<Developer> getReviewers() {
+        return reviewers;
     }
 
-    public void setReviewer(Set<Developer> reviewers) {
-        this.reviewer = reviewers;
+    public void setReviewers(Set<Developer> reviewers) {
+        this.reviewers = reviewers;
     }
 
     public Developer getOwner() {

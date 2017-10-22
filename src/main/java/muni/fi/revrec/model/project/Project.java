@@ -12,14 +12,15 @@ public class Project {
     @Id
     private String name;
 
-    @Column(name = "gerrit_url")
-    private String gerritUrl;
+    @Column(name = "project_url")
+    private String projectUrl;
 
     public Project() {
     }
 
-    public Project(String name) {
+    public Project(String name, String projectUrl) {
         this.name = name;
+        this.projectUrl = projectUrl;
     }
 
     public String getName() {
@@ -30,11 +31,11 @@ public class Project {
         this.name = projectName;
     }
 
-    public String getGerritUrl() {
-        return gerritUrl;
+    public String getProjectUrl() {
+        return projectUrl;
     }
 
-    public void setGerritUrl(String gerritUrl) {
-        this.gerritUrl = gerritUrl;
+    public void setProjectUrl(String projectUrl) {
+        this.projectUrl = projectUrl;
     }
 }

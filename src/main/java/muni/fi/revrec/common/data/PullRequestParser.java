@@ -7,6 +7,8 @@ import java.util.Set;
 
 public interface PullRequestParser {
 
+    Set<Developer> getReviewers();
+
     Set<FilePath> getFilePaths();
 
     String getChangeId();

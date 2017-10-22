@@ -9,5 +9,5 @@ import javax.transaction.Transactional;
  */
 @Transactional
 public interface DeveloperDAO extends CrudRepository<Developer, Integer> {
-    Developer findByEmail(String email);
+    Developer findByAccountIdAndNameAndEmail(String accountId, String name, String email);
 }

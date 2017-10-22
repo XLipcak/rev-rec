@@ -73,7 +73,7 @@ public abstract class ReviewerRecommendationBase {
         List<Developer> removedReviewers = new ArrayList<>();
         for (Developer reviewer : reviewersList) {
 
-            if (pullRequestDAO.findByReviewerAndTimestampLessThanAndTimestampGreaterThanAndProjectName(reviewer, pullRequest.getTimestamp(), pullRequest.getTimestamp() - timeRetired, project).size() > 0) {
+            if (pullRequestDAO.findByReviewersAndTimestampLessThanAndTimestampGreaterThanAndProjectName(reviewer, pullRequest.getTimestamp(), pullRequest.getTimestamp() - timeRetired, project).size() > 0) {
                 result.add(reviewer);
             } else {
                 removedReviewers.add(reviewer);
