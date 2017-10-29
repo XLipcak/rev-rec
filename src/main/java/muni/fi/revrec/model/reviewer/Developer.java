@@ -1,5 +1,6 @@
 package muni.fi.revrec.model.reviewer;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.gerrit.extensions.common.AccountInfo;
 
 import javax.persistence.Entity;
@@ -13,6 +14,7 @@ import javax.persistence.Id;
 @Entity
 public class Developer {
     @Id
+    @JsonIgnore
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 

@@ -16,6 +16,7 @@ public class FilePath {
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 
+    @Column(length = 1024)
     private String location;
 
     @JsonIgnore

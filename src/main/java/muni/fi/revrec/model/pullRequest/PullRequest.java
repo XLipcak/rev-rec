@@ -18,6 +18,7 @@ public class PullRequest {
     @GeneratedValue(strategy = GenerationType.TABLE)
     private Integer id;
 
+    @JsonIgnore
     @OneToOne(fetch = FetchType.EAGER)
     private Project project;
 
