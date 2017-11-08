@@ -28,7 +28,9 @@ public class PullRequest {
     private Integer changeNumber;
     private Long timestamp;
 
-    @JoinTable(name = "review")
+    @JoinTable(name = "review", joinColumns = {@JoinColumn(name = "pull_request_id", referencedColumnName = "id")},
+    inverseJoinColumns = {@JoinColumn(name = "reviewer_id", referencedColumnName = "id")})
+    //@JoinTable(name = "review")
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Developer> reviewers;
 
