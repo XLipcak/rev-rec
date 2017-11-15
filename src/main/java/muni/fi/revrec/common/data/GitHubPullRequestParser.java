@@ -24,27 +24,40 @@ public class GitHubPullRequestParser implements PullRequestParser {
     @Value("${project.url}")
     private String projectUrl;
 
+    private String gitHubToken;
+
     private JsonObject jsonObject;
 
     @Override
     public Set<FilePath> getFilePaths() {
+        int changedFiles = jsonObject.get("changed_files").getAsInt();
+
         Set<FilePath> result = new HashSet<>();
         HttpResponse<String> jsonResponse = null;
-        try {
-            jsonResponse = Unirest.get(projectUrl + "/pulls/" + getChangeNumber() + "/files")
-                    .asString();
-        } catch (UnirestException e) {
-            throw new RuntimeException();
-        }
-        String json = jsonResponse.getBody();
+        for (int x = 1; true; x++) {
+            try {
+                jsonResponse = Unirest.get(projectUrl + "/pulls/" + getChangeNumber() + "/files")
+                        .queryString("access_token", gitHubToken)
+                        .queryString("page", x)
+                        .asString();
+            } catch (UnirestException e) {
+                throw new RuntimeException();
+            }
+            String json = jsonResponse.getBody();
+            if(json.equals("[]")){
+                return result;
+            }
 
-        for(JsonElement jsonElement: ((JsonArray) new JsonParser().parse(json))){
-            FilePath filePath = new FilePath();
-            filePath.setLocation(((JsonObject)jsonElement).get("filename").getAsString());
-            result.add(filePath);
-        }
+            if(json.equals("{\"message\":\"Not Found\",\"documentation_url\":\"https://developer.github.com/v3/pulls/#list-pull-requests-files\"}")){
+                return null;
+            }
 
-        return result;
+            for (JsonElement jsonElement : ((JsonArray) new JsonParser().parse(json))) {
+                FilePath filePath = new FilePath();
+                filePath.setLocation(((JsonObject) jsonElement).get("filename").getAsString());
+                result.add(filePath);
+            }
+        }
     }
 
     @Override
@@ -79,7 +92,50 @@ public class GitHubPullRequestParser implements PullRequestParser {
     @Override
     public Set<Developer> getReviewers() {
         Set<Developer> result = new HashSet<>();
-        result.add(parseDeveloper(jsonObject.get("merged_by")));
+        int changeNumber = getChangeNumber();
+        //result.add(parseDeveloper(jsonObject.get("merged_by")));
+
+        HttpResponse<String> jsonResponse;
+        String json;
+
+        try {
+            jsonResponse = Unirest.get(projectUrl + "/issues/" + getChangeNumber() + "/comments")
+                    .queryString("access_token", gitHubToken)
+                    .asString();
+        } catch (UnirestException e) {
+            throw new RuntimeException();
+        }
+
+        json = jsonResponse.getBody();
+
+        for (JsonElement jsonElement : ((JsonArray) new JsonParser().parse(json))) {
+            Developer developer = parseDeveloper(jsonElement.getAsJsonObject().get("user"));
+            if (!developer.getName().contains("bot")) {
+                result.add(developer);
+            }
+        }
+
+        try {
+            jsonResponse = Unirest.get(projectUrl + "/pulls/" + getChangeNumber() + "/reviews")
+                    .queryString("access_token", gitHubToken)
+                    .asString();
+        } catch (UnirestException e) {
+            throw new RuntimeException();
+        }
+
+        json = jsonResponse.getBody();
+
+        if(json.equals("{\"message\":\"Not Found\",\"documentation_url\":\"https://developer.github.com/v3\"}")){
+            return result;
+        }
+
+        for (JsonElement jsonElement : ((JsonArray) new JsonParser().parse(json))) {
+            Developer developer = parseDeveloper(jsonElement.getAsJsonObject().get("user"));
+            if (!developer.getName().contains("bot")) {
+                result.add(developer);
+            }
+        }
+
         return result;
     }
 
@@ -95,5 +151,13 @@ public class GitHubPullRequestParser implements PullRequestParser {
         developer.setEmail("");
         developer.setAvatar(((JsonObject) jsonElement).get("avatar_url").getAsString());
         return developer;
+    }
+
+    public String getGitHubToken() {
+        return gitHubToken;
+    }
+
+    public void setGitHubToken(String gitHubToken) {
+        this.gitHubToken = gitHubToken;
     }
 }
