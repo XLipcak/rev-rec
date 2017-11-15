@@ -301,7 +301,9 @@ public class RevFinder extends ReviewerRecommendationBase implements ReviewerRec
      */
     private void modifyPullRequestFilePaths(PullRequest pullRequest) {
         Set<FilePath> filePaths = new HashSet<>();
-        pullRequest.getFilePaths().forEach(x -> filePaths.add(new FilePath(removeSlashes(pullRequest.getSubProject()) + "/" + x.getLocation())));
+        pullRequest.getFilePaths().forEach(x ->
+                filePaths.add(new FilePath((pullRequest.getSubProject() != null && !pullRequest.getSubProject().isEmpty()) ?
+                        removeSlashes(pullRequest.getSubProject()) + "/" + x.getLocation() : x.getLocation())));
         pullRequest.setFilePaths(filePaths);
     }
 

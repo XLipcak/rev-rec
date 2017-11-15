@@ -14,7 +14,6 @@ import muni.fi.revrec.recommendation.reviewbot.ReviewBot;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -56,9 +55,6 @@ public class InitialLoader implements CommandLineRunner {
     @Autowired
     DataLoader dataLoader;
 
-    @Value("${recommendation.project}")
-    private String project;
-
     String output = "";
 
     @Override
@@ -66,6 +62,7 @@ public class InitialLoader implements CommandLineRunner {
         String[] mailAddresses = {"jakublipcak@gmail.com"};
 
         List<Project> projects = new ArrayList<>();
+
         projects.add(new Project("android", "https://android-review.googlesource.com/"));
         projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
         projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
@@ -116,22 +113,22 @@ public class InitialLoader implements CommandLineRunner {
                 // 1.) Revfinder
                 printLine("Evaluating REVFINDER");
                 revFinder = new RevFinder(pullRequestDAO, false, 12, project.getName(), false);
-                evaluateRevFinderAlgorithm();
+                evaluateRevFinderAlgorithm(project.getName());
 
                 // 2.) Revfinder+
                 printLine("Evaluating REVFINDER+");
                 revFinder = new RevFinder(pullRequestDAO, true, 12, project.getName(), true);
-                evaluateRevFinderAlgorithm();
-
-                // 3.) NB
-                printLine("Evaluating NB");
-                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), true);
-                evaluateBayesRecAlgorithm();
-
-                // 4.) NB+
-                printLine("Evaluating NB+");
-                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), false);
-                evaluateBayesRecAlgorithm();
+                evaluateRevFinderAlgorithm(project.getName());
+//
+//                // 3.) NB
+//                printLine("Evaluating NB");
+//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), true);
+//                evaluateBayesRecAlgorithm();
+//
+//                // 4.) NB+
+//                printLine("Evaluating NB+");
+//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), false);
+//                evaluateBayesRecAlgorithm();
 
                 printLine("################################################");
             } catch (Exception ex) {
@@ -190,7 +187,7 @@ public class InitialLoader implements CommandLineRunner {
     /**
      * Evaluate the RevFinder algorithm using the metrics Top-k Accuracy and Mean Reciprocal Rank.
      */
-    private void evaluateRevFinderAlgorithm() {
+    private void evaluateRevFinderAlgorithm(String projectName) {
 
         // init variables
         int top1Counter = 0;
@@ -199,7 +196,7 @@ public class InitialLoader implements CommandLineRunner {
         int top10Counter = 0;
         double mrrValue = 0;
         int iterationsCounter = 0;
-        List<PullRequest> pullRequests = pullRequestDAO.findByProjectNameOrderByTimestampDesc(project);
+        List<PullRequest> pullRequests = pullRequestDAO.findByProjectNameOrderByTimestampDesc(projectName);
 
         for (PullRequest pullRequest : pullRequests) {
 
@@ -261,7 +258,7 @@ public class InitialLoader implements CommandLineRunner {
     /**
      * Evaluate the Naive Bayes-based recommendation algorithm using the metrics Top-k Accuracy and Mean Reciprocal Rank.
      */
-    private void evaluateBayesRecAlgorithm() {
+    private void evaluateBayesRecAlgorithm(String projectName) {
 
         // init variables
         int top1Counter = 0;
@@ -270,7 +267,7 @@ public class InitialLoader implements CommandLineRunner {
         int top10Counter = 0;
         double mrrValue = 0;
         int iterationsCounter = 0;
-        List<PullRequest> pullRequests = pullRequestDAO.findByProjectNameOrderByTimestampDesc(project);
+        List<PullRequest> pullRequests = pullRequestDAO.findByProjectNameOrderByTimestampDesc(projectName);
         int foldSize = pullRequests.size() / 11;
         int modelBuildCounter = 0;
 
@@ -352,7 +349,7 @@ public class InitialLoader implements CommandLineRunner {
 
     private void printLine(String text) {
         System.out.println(text);
-        output += text;
+        output += "\n" + text;
         //logger.info(project + " " + text);
     }
 }

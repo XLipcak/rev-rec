@@ -268,8 +268,9 @@ public class DataLoader {
         for (PullRequest pullRequest : obj) {
             pullRequest.setOwner(createIfNotExist(pullRequest.getOwner()));
             pullRequest.setReviewers(createIfNotExist(pullRequest.getReviewers()));
-            create(pullRequest.getFilePaths(), pullRequest);
             pullRequest.setProject(project);
+            pullRequestDAO.save(pullRequest);
+            create(pullRequest.getFilePaths(), pullRequest);
         }
     }
 

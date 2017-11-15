@@ -53,7 +53,7 @@ public abstract class ReviewerRecommendationBase {
 
         //print recommended reviewers
         for (int x = 0; x < result.size(); x++) {
-            logger.info((x + 1) + " " + result.get(x).getName());
+            //logger.info((x + 1) + " " + result.get(x).getName());
         }
 
         return result;
