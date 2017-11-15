@@ -1,7 +1,10 @@
 package muni.fi.revrec;
 
-import muni.fi.revrec.common.data.DataLoader;
 import muni.fi.revrec.common.GerritService;
+import muni.fi.revrec.common.MailService;
+import muni.fi.revrec.common.data.DataLoader;
+import muni.fi.revrec.model.filePath.FilePathDAO;
+import muni.fi.revrec.model.project.Project;
 import muni.fi.revrec.model.pullRequest.PullRequest;
 import muni.fi.revrec.model.pullRequest.PullRequestDAO;
 import muni.fi.revrec.model.reviewer.Developer;
@@ -15,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,6 +36,9 @@ public class InitialLoader implements CommandLineRunner {
     private PullRequestDAO pullRequestDAO;
 
     @Autowired
+    private FilePathDAO filePathDAO;
+
+    @Autowired
     private GerritService gerritService;
 
     @Autowired
@@ -44,15 +51,121 @@ public class InitialLoader implements CommandLineRunner {
     private ReviewBot reviewBot;
 
     @Autowired
+    private MailService mailService;
+
+    @Autowired
     DataLoader dataLoader;
 
     @Value("${recommendation.project}")
     private String project;
 
+    String output = "";
+
     @Override
     public void run(String... strings) throws Exception {
+        String[] mailAddresses = {"jakublipcak@gmail.com"};
 
-        dataLoader.fetchData();
+        List<Project> projects = new ArrayList<>();
+        projects.add(new Project("android", "https://android-review.googlesource.com/"));
+        projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
+        projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
+        projects.add(new Project("atom", "https://api.github.com/repos/atom/atom"));
+        projects.add(new Project("django", "https://api.github.com/repos/django/django"));
+        projects.add(new Project("chromium", "https://chromium-review.googlesource.com"));
+        projects.add(new Project("eclipse", "https://git.eclipse.org/r/"));
+        projects.add(new Project("gem5", "https://gem5-review.googlesource.com"));
+        projects.add(new Project("go", "https://go-review.googlesource.com"));
+        projects.add(new Project("gwt", "https://gwt-review.googlesource.com"));
+        projects.add(new Project("jekyll", "https://api.github.com/repos/jekyll/jekyll"));
+        projects.add(new Project("jquery", "https://github.com/jquery/jquery"));
+        projects.add(new Project("kitware", "http://review.source.kitware.com/"));
+        projects.add(new Project("laravel", "https://api.github.com/repos/laravel/laravel"));
+        projects.add(new Project("lineageos", "https://review.lineageos.org/"));
+        projects.add(new Project("material-ui", "https://api.github.com/repos/callemall/material-ui"));
+        projects.add(new Project("meteor", "https://api.github.com/repos/meteor/meteor"));
+        projects.add(new Project("moment", "https://api.github.com/repos/moment/moment"));
+        projects.add(new Project("oh-my-zsh", "https://api.github.com/repos/robbyrussell/oh-my-zsh"));
+        projects.add(new Project("openstack", "https://review.openstack.org/"));
+        projects.add(new Project("qt", "https://codereview.qt-project.org"));
+        projects.add(new Project("react", "https://github.com/facebook/react"));
+        projects.add(new Project("react-native", "https://github.com/facebook/react-native"));
+        projects.add(new Project("redux", "https://api.github.com/repos/reactjs/redux"));
+        projects.add(new Project("revealjs", "https://api.github.com/repos/hakimel/reveal.js"));
+        projects.add(new Project("swift", "https://api.github.com/repos/apple/swift"));
+        projects.add(new Project("tensorflow", "https://api.github.com/repos/tensorflow/tensorflow"));
+        projects.add(new Project("threejs", "https://api.github.com/repos/mrdoob/three.js"));
+        projects.add(new Project("typo3", "https://review.typo3.org/"));
+        projects.add(new Project("vue", "https://api.github.com/repos/vuejs/vue"));
+
+
+//        projects.add(new Project("scilab", "https://codereview.scilab.org/"));
+//        projects.add(new Project("openswitch", "https://review.openswitch.net"));
+//        projects.add(new Project("vaadin", "https://dev.vaadin.com"));
+//        projects.add(new Project("libreoffice", "https://gerrit.libreoffice.org/"));
+//        projects.add(new Project("kubernetes", "https://api.github.com/repos/kubernetes/kubernetes"));
+
+
+        for (Project project : projects) {
+            try {
+                printLine("################################################");
+                dataLoader.initDbFromJson(project.getName(), project.getProjectUrl());
+                printLine("Analysis of project: " + project.getName());
+                printLine("Repository: " + project.getProjectUrl());
+                printLine("Pull requests: " + pullRequestDAO.findAll().size());
+
+                // 1.) Revfinder
+                printLine("Evaluating REVFINDER");
+                revFinder = new RevFinder(pullRequestDAO, false, 12, project.getName(), false);
+                evaluateRevFinderAlgorithm();
+
+                // 2.) Revfinder+
+                printLine("Evaluating REVFINDER+");
+                revFinder = new RevFinder(pullRequestDAO, true, 12, project.getName(), true);
+                evaluateRevFinderAlgorithm();
+
+                // 3.) NB
+                printLine("Evaluating NB");
+                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), true);
+                evaluateBayesRecAlgorithm();
+
+                // 4.) NB+
+                printLine("Evaluating NB+");
+                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), false);
+                evaluateBayesRecAlgorithm();
+
+                printLine("################################################");
+            } catch (Exception ex) {
+                try {
+                    for (String address : mailAddresses) {
+                        mailService.sendSimpleMessage(address, "Error", output + "\n" + ex.getMessage());
+                    }
+                } catch (Exception mailEx) {
+                    printLine("Emails could not be sent: " + mailEx.getMessage());
+                }
+                continue;
+            }
+
+            try {
+                for (String address : mailAddresses) {
+                    mailService.sendSimpleMessage(address, "Results for project [" + project.getName() + "]", output);
+                }
+            } catch (Exception mailEx) {
+                printLine("Emails could not be sent: " + mailEx.getMessage());
+            }
+            output = "";
+        }
+
+
+//        for (Project x : projects) {
+//            System.out.println("Processing project: " + x.getName());
+//            dataLoader.deleteData();
+//            try {
+//                dataLoader.fetchData(x.getName(), x.getProjectUrl());
+//            } catch (IndexOutOfBoundsException ex) {
+//                logger.error(ex);
+//                dataLoader.saveDataToFile(x.getName());
+//            }
+//        }
 
         /* run the evaluation of the RevFinder algorithm */
         //evaluateRevFinderAlgorithm();
@@ -141,9 +254,8 @@ public class InitialLoader implements CommandLineRunner {
                     break;
                 }
             }
-
-            printMetrics(iterationsCounter, top1Counter, top3Counter, top5Counter, top10Counter, mrrValue, pullRequest.getChangeNumber());
         }
+        printMetrics(iterationsCounter, top1Counter, top3Counter, top5Counter, top10Counter, mrrValue);
     }
 
     /**
@@ -216,32 +328,31 @@ public class InitialLoader implements CommandLineRunner {
                     break;
                 }
             }
-
-            printMetrics(iterationsCounter, top1Counter, top3Counter, top5Counter, top10Counter, mrrValue, pullRequest.getChangeNumber());
         }
+        printMetrics(iterationsCounter, top1Counter, top3Counter, top5Counter, top10Counter, mrrValue);
     }
 
     private void printMetrics(int iterationsCounter, int top1Counter, int top3Counter, int top5Counter,
-                              int top10Counter, double mrrValue, int changeRequestNumber) {
+                              int top10Counter, double mrrValue) {
         printLine("Iterations: " + iterationsCounter);
-        printLine("Change request number: " + changeRequestNumber);
         printLine("Top-1 accuracy: " + ((double) top1Counter / (double) iterationsCounter) * 100d + "%");
         printLine("Top-3 accuracy: " + ((double) top3Counter / (double) iterationsCounter) * 100d + "%");
         printLine("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
         printLine("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
         printLine("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
 
-        printLine("top1Counter: " + top1Counter);
-        printLine("top3Counter: " + top3Counter);
-        printLine("top5Counter: " + top5Counter);
-        printLine("top10Counter: " + top10Counter);
-        printLine("mrrValue: " + mrrValue);
-        printLine("iterationsCounter: " + iterationsCounter);
+//        printLine("top1Counter: " + top1Counter);
+//        printLine("top3Counter: " + top3Counter);
+//        printLine("top5Counter: " + top5Counter);
+//        printLine("top10Counter: " + top10Counter);
+//        printLine("mrrValue: " + mrrValue);
+//        printLine("iterationsCounter: " + iterationsCounter);
         printLine("_____________________________________________");
     }
 
     private void printLine(String text) {
         System.out.println(text);
+        output += text;
         //logger.info(project + " " + text);
     }
 }
