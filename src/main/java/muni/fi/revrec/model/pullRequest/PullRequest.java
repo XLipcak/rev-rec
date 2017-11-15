@@ -29,15 +29,14 @@ public class PullRequest {
     private Long timestamp;
 
     @JoinTable(name = "review", joinColumns = {@JoinColumn(name = "pull_request_id", referencedColumnName = "id")},
-    inverseJoinColumns = {@JoinColumn(name = "reviewer_id", referencedColumnName = "id")})
-    //@JoinTable(name = "review")
+            inverseJoinColumns = {@JoinColumn(name = "reviewer_id", referencedColumnName = "id")})
     @ManyToMany(fetch = FetchType.EAGER)
     private Set<Developer> reviewers;
 
     @OneToOne(fetch = FetchType.EAGER)
     private Developer owner;
 
-    @OneToMany(mappedBy = "pullRequest", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "pullRequest", fetch = FetchType.EAGER, cascade = CascadeType.REMOVE, orphanRemoval = true)
     private Set<FilePath> filePaths;
 
     public PullRequest() {

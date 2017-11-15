@@ -44,12 +44,16 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
     private List<Developer> allOwners;
     private List<String> allSubProjects;
 
+    private boolean useSubProjectName;
+
     public BayesRec(@Autowired PullRequestDAO pullRequestDAO,
                     @Autowired FilePathDAO filePathDAO,
                     @Value("${recommendation.retired}") boolean removeRetiredReviewers,
                     @Value("${recommendation.retired.interval}") long timeRetiredInMonths,
-                    @Value("${recommendation.project}") String project) {
+                    @Value("${recommendation.project}") String project,
+                    @Value("${recommendation.revfinder.projectname}") boolean useSubProjectName) {
         super(pullRequestDAO, removeRetiredReviewers, timeRetiredInMonths, project);
+        this.useSubProjectName = useSubProjectName;
         this.filePathDAO = filePathDAO;
     }
 
@@ -69,7 +73,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         allFilePaths = findAllFilePaths(timestamp);
         allOwners = findAllOwners(timestamp);
         allReviewers = findAllCodeReviewers(timestamp);
-        allSubProjects = findAllSubProjects(timestamp);
+        allSubProjects = useSubProjectName ? findAllSubProjects(timestamp) : Collections.singletonList("");
 
         //Build Bayesian network
         BayesNet net = new BayesNet();
@@ -144,10 +148,10 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         }
 
         for (Developer reviewer : allReviewers) {
-            double denumeratorSize = (double) pullRequestDAO.findByProjectNameAndReviewersAndTimestampLessThan(project, reviewer, timestamp).size();
+            double denumeratorSize = useSubProjectName ? (double) pullRequestDAO.findByProjectNameAndReviewersAndTimestampLessThan(project, reviewer, timestamp).size() : 1d;
             for (String subProject : subProjectsArray) {
-                subProjectProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndSubProjectAndReviewersAndTimestampLessThan(project, subProject, reviewer, timestamp) /
-                        denumeratorSize);
+                double numerator = useSubProjectName ? (double) pullRequestDAO.countByProjectNameAndSubProjectAndReviewersAndTimestampLessThan(project, subProject, reviewer, timestamp) : 1d;
+                subProjectProbabilities[index] = (numerator / denumeratorSize);
                 index++;
                 logger.info(index + "/" + subProjectProbabilities.length);
             }
