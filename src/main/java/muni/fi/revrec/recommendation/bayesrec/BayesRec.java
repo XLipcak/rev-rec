@@ -73,7 +73,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         allFilePaths = findAllFilePaths(timestamp);
         allOwners = findAllOwners(timestamp);
         allReviewers = findAllCodeReviewers(timestamp);
-        allSubProjects = useSubProjectName ? findAllSubProjects(timestamp) : Collections.singletonList("");
+        allSubProjects = findAllSubProjects(timestamp);
 
         //Build Bayesian network
         BayesNet net = new BayesNet();
@@ -82,7 +82,11 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         BayesNode reviewersNode = createReviewersNode(net, timestamp);
 
         //Build Subproject node
-        BayesNode subProjectNode = createSubProjectsNode(net, timestamp, reviewersNode);
+        BayesNode subProjectNode = null;
+
+        if (useSubProjectName) {
+            subProjectNode = createSubProjectsNode(net, timestamp, reviewersNode);
+        }
 
         //Build File path node
         BayesNode filePathNode = createFilePathsNode(net, timestamp, reviewersNode);
@@ -118,7 +122,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
             reviewersOutcomes[index] = reviewer.getId().toString();
             reviewersProbabilities[index] = ((double) (pullRequestDAO.countByReviewersAndProjectNameAndTimestampLessThan(reviewer, project, timestamp)) / allReviewersSize);
             index++;
-            logger.info(index + "/" + reviewersProbabilities.length);
+//            logger.info(index + "/" + reviewersProbabilities.length);
         }
         reviewersNode.addOutcomes(reviewersOutcomes);
         reviewersNode.setProbabilities(reviewersProbabilities);
@@ -153,7 +157,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
                 double numerator = useSubProjectName ? (double) pullRequestDAO.countByProjectNameAndSubProjectAndReviewersAndTimestampLessThan(project, subProject, reviewer, timestamp) : 1d;
                 subProjectProbabilities[index] = (numerator / denumeratorSize);
                 index++;
-                logger.info(index + "/" + subProjectProbabilities.length);
+//                logger.info(index + "/" + subProjectProbabilities.length);
             }
             subProjectProbabilities = laplaceSmoothing(index - subProjectsArray.length, index, subProjectProbabilities);
         }
@@ -190,7 +194,7 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
                 ownerNodeProbabilities[index] = ((double) pullRequestDAO.countByProjectNameAndReviewersAndOwnerAndTimestampLessThan(project,
                         reviewer, owner, timestamp)) / denumeratorSize;
                 index++;
-                logger.info(index + "/" + ownerNodeProbabilities.length);
+//                logger.info(index + "/" + ownerNodeProbabilities.length);
             }
             ownerNodeProbabilities = laplaceSmoothing(index - allOwners.size(), index, ownerNodeProbabilities);
         }
@@ -221,9 +225,9 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
             for (String filePath : filePathNodeOutcomes) {
                 filePathNodeProbabilities[index] =
                         ((double) filePathDAO.countByPullRequestProjectNameAndLocationAndPullRequestReviewersAndPullRequestTimestampLessThan(project,
-                                filePath, reviewer, timestamp)) / denumeratorSize;
+                                filePath, reviewer, timestamp)) / (denumeratorSize != 0 ? denumeratorSize : 1);
                 index++;
-                logger.info(index + "/" + filePathNodeProbabilities.length);
+//                logger.info(index + "/" + filePathNodeProbabilities.length);
             }
             filePathNodeProbabilities = laplaceSmoothing(index - filePathNodeOutcomes.length, index, filePathNodeProbabilities);
         }
@@ -273,11 +277,13 @@ public class BayesRec extends ReviewerRecommendationBase implements ReviewerReco
         Map<Developer, Double> result = new HashMap<>();
         Map<BayesNode, String> evidence = new HashMap<>();
 
-        if (new HashSet<>(allSubProjects).contains(pullRequest.getSubProject())) {
-            evidence.put(subProjectNode, pullRequest.getSubProject());
-        } else {
-            //unknown variable
-            evidence.put(subProjectNode, "otherSubProject");
+        if (useSubProjectName) {
+            if (new HashSet<>(allSubProjects).contains(pullRequest.getSubProject())) {
+                evidence.put(subProjectNode, pullRequest.getSubProject());
+            } else {
+                //unknown variable
+                evidence.put(subProjectNode, "otherSubProject");
+            }
         }
 
         if (new HashSet<>(allFilePaths).contains(filePathLocation)) {

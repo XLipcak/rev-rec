@@ -63,27 +63,27 @@ public class InitialLoader implements CommandLineRunner {
 
         List<Project> projects = new ArrayList<>();
 
-        projects.add(new Project("android", "https://android-review.googlesource.com/"));
-        projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
-        projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
-        projects.add(new Project("atom", "https://api.github.com/repos/atom/atom"));
-        projects.add(new Project("django", "https://api.github.com/repos/django/django"));
-        projects.add(new Project("chromium", "https://chromium-review.googlesource.com"));
-        projects.add(new Project("eclipse", "https://git.eclipse.org/r/"));
-        projects.add(new Project("gem5", "https://gem5-review.googlesource.com"));
-        projects.add(new Project("go", "https://go-review.googlesource.com"));
-        projects.add(new Project("gwt", "https://gwt-review.googlesource.com"));
-        projects.add(new Project("jekyll", "https://api.github.com/repos/jekyll/jekyll"));
-        projects.add(new Project("jquery", "https://github.com/jquery/jquery"));
-        projects.add(new Project("kitware", "http://review.source.kitware.com/"));
-        projects.add(new Project("laravel", "https://api.github.com/repos/laravel/laravel"));
-        projects.add(new Project("lineageos", "https://review.lineageos.org/"));
-        projects.add(new Project("material-ui", "https://api.github.com/repos/callemall/material-ui"));
-        projects.add(new Project("meteor", "https://api.github.com/repos/meteor/meteor"));
-        projects.add(new Project("moment", "https://api.github.com/repos/moment/moment"));
-        projects.add(new Project("oh-my-zsh", "https://api.github.com/repos/robbyrussell/oh-my-zsh"));
-        projects.add(new Project("openstack", "https://review.openstack.org/"));
-        projects.add(new Project("qt", "https://codereview.qt-project.org"));
+//        projects.add(new Project("android", "https://android-review.googlesource.com/"));
+//        projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
+//        projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
+//        projects.add(new Project("atom", "https://api.github.com/repos/atom/atom"));
+//        projects.add(new Project("django", "https://api.github.com/repos/django/django"));
+//        projects.add(new Project("chromium", "https://chromium-review.googlesource.com"));
+//        projects.add(new Project("eclipse", "https://git.eclipse.org/r/"));
+//        projects.add(new Project("gem5", "https://gem5-review.googlesource.com"));
+//        projects.add(new Project("go", "https://go-review.googlesource.com"));
+//        projects.add(new Project("gwt", "https://gwt-review.googlesource.com"));
+//        projects.add(new Project("jekyll", "https://api.github.com/repos/jekyll/jekyll"));
+//        projects.add(new Project("jquery", "https://github.com/jquery/jquery"));
+//        projects.add(new Project("kitware", "http://review.source.kitware.com/"));
+//        projects.add(new Project("laravel", "https://api.github.com/repos/laravel/laravel"));
+//        projects.add(new Project("lineageos", "https://review.lineageos.org/"));
+//        projects.add(new Project("material-ui", "https://api.github.com/repos/callemall/material-ui"));
+//        projects.add(new Project("meteor", "https://api.github.com/repos/meteor/meteor"));
+//        projects.add(new Project("moment", "https://api.github.com/repos/moment/moment"));
+//        projects.add(new Project("oh-my-zsh", "https://api.github.com/repos/robbyrussell/oh-my-zsh"));
+//        projects.add(new Project("openstack", "https://review.openstack.org/"));
+//        projects.add(new Project("qt", "https://codereview.qt-project.org"));
         projects.add(new Project("react", "https://github.com/facebook/react"));
         projects.add(new Project("react-native", "https://github.com/facebook/react-native"));
         projects.add(new Project("redux", "https://api.github.com/repos/reactjs/redux"));
@@ -93,8 +93,16 @@ public class InitialLoader implements CommandLineRunner {
         projects.add(new Project("threejs", "https://api.github.com/repos/mrdoob/three.js"));
         projects.add(new Project("typo3", "https://review.typo3.org/"));
         projects.add(new Project("vue", "https://api.github.com/repos/vuejs/vue"));
+        projects.add(new Project("webpack", "https://api.github.com/repos/webpack/webpack"));
+        projects.add(new Project("ionic", "https://api.github.com/repos/ionic-team/ionic"));
+        projects.add(new Project("RxJava", "https://api.github.com/repos/ReactiveX/RxJava"));
+        projects.add(new Project("requests", "https://api.github.com/repos/requests/requests"));
+        projects.add(new Project("homebrew-core", "https://api.github.com/repos/Homebrew/homebrew-core"));
+        projects.add(new Project("yarn", "https://api.github.com/repos/yarnpkg/yarn"));
+        projects.add(new Project("kubernetes", "https://api.github.com/repos/adobe/brackets"));
 
 
+        //these projects are not mined yet
 //        projects.add(new Project("scilab", "https://codereview.scilab.org/"));
 //        projects.add(new Project("openswitch", "https://review.openswitch.net"));
 //        projects.add(new Project("vaadin", "https://dev.vaadin.com"));
@@ -104,7 +112,7 @@ public class InitialLoader implements CommandLineRunner {
 
         for (Project project : projects) {
             try {
-                printLine("################################################");
+                printLine("_____________________________________________");
                 dataLoader.initDbFromJson(project.getName(), project.getProjectUrl());
                 printLine("Analysis of project: " + project.getName());
                 printLine("Repository: " + project.getProjectUrl());
@@ -119,18 +127,17 @@ public class InitialLoader implements CommandLineRunner {
                 printLine("Evaluating REVFINDER+");
                 revFinder = new RevFinder(pullRequestDAO, true, 12, project.getName(), true);
                 evaluateRevFinderAlgorithm(project.getName());
-//
-//                // 3.) NB
-//                printLine("Evaluating NB");
-//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), true);
-//                evaluateBayesRecAlgorithm();
-//
-//                // 4.) NB+
-//                printLine("Evaluating NB+");
-//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), false);
-//                evaluateBayesRecAlgorithm();
 
-                printLine("################################################");
+                  // 3.) NB
+//                printLine("Evaluating NB");
+//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), false);
+//                evaluateBayesRecAlgorithm(project.getName());
+//
+                  // 4.) NB+
+//                printLine("Evaluating NB+");
+//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), true);
+//                evaluateBayesRecAlgorithm(project.getName());
+
             } catch (Exception ex) {
                 try {
                     for (String address : mailAddresses) {
@@ -251,6 +258,10 @@ public class InitialLoader implements CommandLineRunner {
                     break;
                 }
             }
+
+            if (iterationsCounter % 100 == 0) {
+                System.out.println("Processed: " + iterationsCounter + " / " + pullRequests.size());
+            }
         }
         printMetrics(iterationsCounter, top1Counter, top3Counter, top5Counter, top10Counter, mrrValue);
     }
@@ -324,6 +335,10 @@ public class InitialLoader implements CommandLineRunner {
                     mrrValue += 1d / (x + 1);
                     break;
                 }
+            }
+
+            if (iterationsCounter % 100 == 0) {
+                System.out.println("Processed: " + iterationsCounter + " / " + pullRequests.size());
             }
         }
         printMetrics(iterationsCounter, top1Counter, top3Counter, top5Counter, top10Counter, mrrValue);
