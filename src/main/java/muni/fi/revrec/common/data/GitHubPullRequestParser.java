@@ -9,7 +9,6 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
 import muni.fi.revrec.model.filePath.FilePath;
 import muni.fi.revrec.model.reviewer.Developer;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
@@ -21,7 +20,6 @@ import java.util.Set;
 @Service
 public class GitHubPullRequestParser implements PullRequestParser {
 
-    @Value("${project.url}")
     private String projectUrl;
 
     private String gitHubToken;
@@ -159,5 +157,13 @@ public class GitHubPullRequestParser implements PullRequestParser {
 
     public void setGitHubToken(String gitHubToken) {
         this.gitHubToken = gitHubToken;
+    }
+
+    public String getProjectUrl() {
+        return projectUrl;
+    }
+
+    public void setProjectUrl(String projectUrl) {
+        this.projectUrl = projectUrl;
     }
 }

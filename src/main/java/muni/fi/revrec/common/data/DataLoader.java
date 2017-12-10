@@ -24,7 +24,6 @@ import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -63,10 +62,7 @@ public class DataLoader {
 
     private String gitHubToken;
 
-    @Value("${recommendation.project}")
     private String projectName;
-
-    @Value("${project.url}")
     private String projectUrl;
 
     public void fetchData(String projectName, String projectUrl) throws UnirestException {
@@ -104,6 +100,7 @@ public class DataLoader {
                         json = jsonResponse.getBody();
                         pullRequestParser = gitHubPullRequestParser;
                         gitHubPullRequestParser.setGitHubToken(gitHubToken);
+                        gitHubPullRequestParser.setProjectUrl(projectUrl);
                     } else {
                         HttpResponse<String> jsonResponse = Unirest.get(projectUrl + "/changes/")
                                 .queryString("start", String.valueOf((iteration * totalPullsInOneRequest) + start))
@@ -125,8 +122,7 @@ public class DataLoader {
                         processedPullRequests = (iteration * totalPullsInOneRequest) + x + start;
                         JsonObject jsonObject = null;
                         if (isGit) {
-                            if (/*((JsonObject) ((JsonArray) new JsonParser().parse(json)).get(x)).get("merged_at").isJsonNull()*/
-                                    ((JsonObject) ((JsonArray) new JsonParser().parse(json)).get(x)).get("state").isJsonNull() || !((JsonObject) ((JsonArray) new JsonParser().parse(json)).get(x)).get("state").getAsString().equals("closed")) {
+                            if (((JsonObject) ((JsonArray) new JsonParser().parse(json)).get(x)).get("state").isJsonNull() || !((JsonObject) ((JsonArray) new JsonParser().parse(json)).get(x)).get("state").getAsString().equals("closed")) {
                                 System.out.println("not merged");
                                 continue;
                             } else {

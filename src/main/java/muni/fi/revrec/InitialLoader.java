@@ -63,51 +63,73 @@ public class InitialLoader implements CommandLineRunner {
 
         List<Project> projects = new ArrayList<>();
 
+        /*
+            Finished projects
+         */
 //        projects.add(new Project("android", "https://android-review.googlesource.com/"));
 //        projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
 //        projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
-//        projects.add(new Project("atom", "https://api.github.com/repos/atom/atom"));
-//        projects.add(new Project("django", "https://api.github.com/repos/django/django"));
 //        projects.add(new Project("chromium", "https://chromium-review.googlesource.com"));
 //        projects.add(new Project("eclipse", "https://git.eclipse.org/r/"));
 //        projects.add(new Project("gem5", "https://gem5-review.googlesource.com"));
 //        projects.add(new Project("go", "https://go-review.googlesource.com"));
 //        projects.add(new Project("gwt", "https://gwt-review.googlesource.com"));
-//        projects.add(new Project("jekyll", "https://api.github.com/repos/jekyll/jekyll"));
 //        projects.add(new Project("jquery", "https://github.com/jquery/jquery"));
 //        projects.add(new Project("kitware", "http://review.source.kitware.com/"));
-//        projects.add(new Project("laravel", "https://api.github.com/repos/laravel/laravel"));
 //        projects.add(new Project("lineageos", "https://review.lineageos.org/"));
-//        projects.add(new Project("material-ui", "https://api.github.com/repos/callemall/material-ui"));
-//        projects.add(new Project("meteor", "https://api.github.com/repos/meteor/meteor"));
-//        projects.add(new Project("moment", "https://api.github.com/repos/moment/moment"));
-//        projects.add(new Project("oh-my-zsh", "https://api.github.com/repos/robbyrussell/oh-my-zsh"));
 //        projects.add(new Project("openstack", "https://review.openstack.org/"));
 //        projects.add(new Project("qt", "https://codereview.qt-project.org"));
-        projects.add(new Project("react", "https://github.com/facebook/react"));
-        projects.add(new Project("react-native", "https://github.com/facebook/react-native"));
-        projects.add(new Project("redux", "https://api.github.com/repos/reactjs/redux"));
-        projects.add(new Project("revealjs", "https://api.github.com/repos/hakimel/reveal.js"));
+//        projects.add(new Project("react", "https://github.com/facebook/react"));
+//        projects.add(new Project("react-native", "https://github.com/facebook/react-native"));
+//        projects.add(new Project("typo3", "https://review.typo3.org/"));
+//        projects.add(new Project("revealjs", "https://api.github.com/repos/hakimel/reveal.js"));
+//        projects.add(new Project("vue", "https://api.github.com/repos/vuejs/vue"));
+//        projects.add(new Project("ionic", "https://api.github.com/repos/ionic-team/ionic"));
+//        projects.add(new Project("requests", "https://api.github.com/repos/requests/requests"));
+//        projects.add(new Project("webpack", "https://api.github.com/repos/webpack/webpack"));
+//        projects.add(new Project("redux", "https://api.github.com/repos/reactjs/redux"));
+//        projects.add(new Project("oh-my-zsh", "https://api.github.com/repos/robbyrussell/oh-my-zsh"));
+
+
+        /*
+            To be tested projects
+         */
+
+        projects.add(new Project("atom", "https://api.github.com/repos/atom/atom"));
+        projects.add(new Project("django", "https://api.github.com/repos/django/django"));
+        projects.add(new Project("jekyll", "https://api.github.com/repos/jekyll/jekyll"));
+        projects.add(new Project("laravel", "https://api.github.com/repos/laravel/laravel"));
+        projects.add(new Project("material-ui", "https://api.github.com/repos/callemall/material-ui"));
+        projects.add(new Project("meteor", "https://api.github.com/repos/meteor/meteor"));
+        projects.add(new Project("moment", "https://api.github.com/repos/moment/moment"));
         projects.add(new Project("swift", "https://api.github.com/repos/apple/swift"));
         projects.add(new Project("tensorflow", "https://api.github.com/repos/tensorflow/tensorflow"));
         projects.add(new Project("threejs", "https://api.github.com/repos/mrdoob/three.js"));
-        projects.add(new Project("typo3", "https://review.typo3.org/"));
-        projects.add(new Project("vue", "https://api.github.com/repos/vuejs/vue"));
-        projects.add(new Project("webpack", "https://api.github.com/repos/webpack/webpack"));
-        projects.add(new Project("ionic", "https://api.github.com/repos/ionic-team/ionic"));
         projects.add(new Project("RxJava", "https://api.github.com/repos/ReactiveX/RxJava"));
-        projects.add(new Project("requests", "https://api.github.com/repos/requests/requests"));
-        projects.add(new Project("homebrew-core", "https://api.github.com/repos/Homebrew/homebrew-core"));
-        projects.add(new Project("yarn", "https://api.github.com/repos/yarnpkg/yarn"));
-        projects.add(new Project("kubernetes", "https://api.github.com/repos/adobe/brackets"));
+        projects.add(new Project("scilab", "https://codereview.scilab.org/"));
+        projects.add(new Project("libreoffice", "https://gerrit.libreoffice.org/"));
+        projects.add(new Project("gerrit", "https://gerrit-review.googlesource.com"));
 
 
-        //these projects are not mined yet
-//        projects.add(new Project("scilab", "https://codereview.scilab.org/"));
-//        projects.add(new Project("openswitch", "https://review.openswitch.net"));
-//        projects.add(new Project("vaadin", "https://dev.vaadin.com"));
-//        projects.add(new Project("libreoffice", "https://gerrit.libreoffice.org/"));
-//        projects.add(new Project("kubernetes", "https://api.github.com/repos/kubernetes/kubernetes"));
+        /*
+            To be mined projects
+         */
+
+        //        projects.add(new Project("homebrew-core", "https://api.github.com/repos/Homebrew/homebrew-core"));
+        //        projects.add(new Project("yarn", "https://api.github.com/repos/yarnpkg/yarn"));
+        //        projects.add(new Project("brackets", "https://api.github.com/repos/adobe/brackets"));
+        //        projects.add(new Project("kubernetes", "https://api.github.com/repos/kubernetes/kubernetes"));
+
+        //        projects.add(new Project("bootstrap", "https://api.github.com/repos/twbs/bootstrap"));
+        //        projects.add(new Project("spring-boot", "https://api.github.com/repos/spring-projects/spring-boot"));
+        //        projects.add(new Project("opencv", "https://api.github.com/repos/opencv/opencv"));
+        //        projects.add(new Project("spark", "https://api.github.com/repos/apache/spark"));
+        //        projects.add(new Project("moby", "https://api.github.com/repos/moby/moby"));
+        //        projects.add(new Project("cgm-remote-monitor", "https://api.github.com/repos/nightscout/cgm-remote-monitor"));
+        //        projects.add(new Project("scikit-learn", "https://api.github.com/repos/scikit-learn/scikit-learn"));
+        //        projects.add(new Project("spring-framework", "https://api.github.com/repos/spring-projects/spring-framework"));
+        //        projects.add(new Project("bitcoin", "https://api.github.com/repos/bitcoin/bitcoin"));
+        //        projects.add(new Project("redis", "https://api.github.com/repos/antirez/redis"));
 
 
         for (Project project : projects) {
@@ -128,15 +150,15 @@ public class InitialLoader implements CommandLineRunner {
                 revFinder = new RevFinder(pullRequestDAO, true, 12, project.getName(), true);
                 evaluateRevFinderAlgorithm(project.getName());
 
-                  // 3.) NB
-//                printLine("Evaluating NB");
-//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), false);
-//                evaluateBayesRecAlgorithm(project.getName());
-//
-                  // 4.) NB+
-//                printLine("Evaluating NB+");
-//                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), true);
-//                evaluateBayesRecAlgorithm(project.getName());
+                // 3.) NB
+                printLine("Evaluating NB");
+                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), false);
+                evaluateBayesRecAlgorithm(project.getName());
+
+                // 4.) NB+
+                printLine("Evaluating NB+");
+                bayesRec = new BayesRec(pullRequestDAO, filePathDAO, true, 12, project.getName(), true);
+                evaluateBayesRecAlgorithm(project.getName());
 
             } catch (Exception ex) {
                 try {
@@ -165,30 +187,11 @@ public class InitialLoader implements CommandLineRunner {
 //            dataLoader.deleteData();
 //            try {
 //                dataLoader.fetchData(x.getName(), x.getProjectUrl());
-//            } catch (IndexOutOfBoundsException ex) {
+//            } catch (Exception ex) {
 //                logger.error(ex);
 //                dataLoader.saveDataToFile(x.getName());
 //            }
 //        }
-
-        /* run the evaluation of the RevFinder algorithm */
-        //evaluateRevFinderAlgorithm();
-
-        /* run the evaluation of the Naive Bayes-based recommendation algorithm */
-        //evaluateBayesRecAlgorithm();
-
-        /* example of recommendation using the RevFinder algorithm */
-        //revFinder.recommend(gerritService.getPullRequest("31353"));
-
-        /* example of recommendation using the Naive Bayes-based recommendation algorithm */
-        //bayesRec.buildModel();
-        //bayesRec.recommend(gerritService.getPullRequest("31353"));
-
-        /* example of recommendation using the ReviewBot algorithm
-           run 'git clone https://android.googlesource.com/platform/bionic'
-           in the 'repos/android/platform' folder before running this example
-        */
-        //reviewBot.recommend(gerritService.getPullRequest("31353"));
     }
 
     /**

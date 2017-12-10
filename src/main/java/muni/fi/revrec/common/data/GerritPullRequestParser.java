@@ -93,7 +93,7 @@ public class GerritPullRequestParser implements PullRequestParser {
         developer.setAccountId(((JsonObject) jsonElement).get("_account_id").getAsString());
         developer.setName(((JsonObject) jsonElement).get("name").getAsString());
         developer.setEmail(((JsonObject) jsonElement).get("email").getAsString());
-        developer.setAvatar(((JsonObject) ((JsonObject) jsonElement).get("avatars").getAsJsonArray().get(0)).get("url").getAsString());
+        //developer.setAvatar(((JsonObject) ((JsonObject) jsonElement).get("avatars").getAsJsonArray().get(0)).get("url").getAsString());
         return developer;
     }
 
