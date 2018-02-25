@@ -96,7 +96,7 @@ public class InitialLoader implements CommandLineRunner {
         projects.add(new Project("swift", "https://api.github.com/repos/apple/swift"));
         projects.add(new Project("tensorflow", "https://api.github.com/repos/tensorflow/tensorflow"));
         projects.add(new Project("threejs", "https://api.github.com/repos/mrdoob/three.js"));
-        projects.add(new Project("RxJava", "https://api.github.com/repos/ReactiveX/RxJava"));
+        projects.add(new Project("rxjava", "https://api.github.com/repos/ReactiveX/RxJava"));
         projects.add(new Project("scilab", "https://codereview.scilab.org/"));
         projects.add(new Project("libreoffice", "https://gerrit.libreoffice.org/"));
         projects.add(new Project("gerrit", "https://gerrit-review.googlesource.com"));
