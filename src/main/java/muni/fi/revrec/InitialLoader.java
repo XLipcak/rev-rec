@@ -1,6 +1,5 @@
 package muni.fi.revrec;
 
-import muni.fi.revrec.common.GerritService;
 import muni.fi.revrec.common.MailService;
 import muni.fi.revrec.common.data.DataLoader;
 import muni.fi.revrec.model.filePath.FilePathDAO;
@@ -26,6 +25,7 @@ import java.util.List;
  *
  * @author Jakub Lipcak, Masaryk University
  */
+
 @Component
 public class InitialLoader implements CommandLineRunner {
 
@@ -36,9 +36,6 @@ public class InitialLoader implements CommandLineRunner {
 
     @Autowired
     private FilePathDAO filePathDAO;
-
-    @Autowired
-    private GerritService gerritService;
 
     @Autowired
     private BayesRec bayesRec;
@@ -58,43 +55,37 @@ public class InitialLoader implements CommandLineRunner {
     String output = "";
 
     @Override
-    public void run(String... strings) throws Exception {
+    public void run(String... strings) {
         String[] mailAddresses = {"jakublipcak@gmail.com"};
 
         List<Project> projects = new ArrayList<>();
 
         /*
-            Finished projects
+            Tested projects
          */
-//        projects.add(new Project("android", "https://android-review.googlesource.com/"));
-//        projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
-//        projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
-//        projects.add(new Project("chromium", "https://chromium-review.googlesource.com"));
-//        projects.add(new Project("eclipse", "https://git.eclipse.org/r/"));
-//        projects.add(new Project("gem5", "https://gem5-review.googlesource.com"));
-//        projects.add(new Project("go", "https://go-review.googlesource.com"));
-//        projects.add(new Project("gwt", "https://gwt-review.googlesource.com"));
-//        projects.add(new Project("jquery", "https://github.com/jquery/jquery"));
-//        projects.add(new Project("kitware", "http://review.source.kitware.com/"));
-//        projects.add(new Project("lineageos", "https://review.lineageos.org/"));
-//        projects.add(new Project("openstack", "https://review.openstack.org/"));
-//        projects.add(new Project("qt", "https://codereview.qt-project.org"));
-//        projects.add(new Project("react", "https://github.com/facebook/react"));
-//        projects.add(new Project("react-native", "https://github.com/facebook/react-native"));
-//        projects.add(new Project("typo3", "https://review.typo3.org/"));
-//        projects.add(new Project("revealjs", "https://api.github.com/repos/hakimel/reveal.js"));
-//        projects.add(new Project("vue", "https://api.github.com/repos/vuejs/vue"));
-//        projects.add(new Project("ionic", "https://api.github.com/repos/ionic-team/ionic"));
-//        projects.add(new Project("requests", "https://api.github.com/repos/requests/requests"));
-//        projects.add(new Project("webpack", "https://api.github.com/repos/webpack/webpack"));
-//        projects.add(new Project("redux", "https://api.github.com/repos/reactjs/redux"));
-//        projects.add(new Project("oh-my-zsh", "https://api.github.com/repos/robbyrussell/oh-my-zsh"));
-
-
-        /*
-            To be tested projects
-         */
-
+        projects.add(new Project("android", "https://android-review.googlesource.com/"));
+        projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
+        projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
+        projects.add(new Project("chromium", "https://chromium-review.googlesource.com"));
+        projects.add(new Project("eclipse", "https://git.eclipse.org/r/"));
+        projects.add(new Project("gem5", "https://gem5-review.googlesource.com"));
+        projects.add(new Project("go", "https://go-review.googlesource.com"));
+        projects.add(new Project("gwt", "https://gwt-review.googlesource.com"));
+        projects.add(new Project("jquery", "https://github.com/jquery/jquery"));
+        projects.add(new Project("kitware", "http://review.source.kitware.com/"));
+        projects.add(new Project("lineageos", "https://review.lineageos.org/"));
+        projects.add(new Project("openstack", "https://review.openstack.org/"));
+        projects.add(new Project("qt", "https://codereview.qt-project.org"));
+        projects.add(new Project("react", "https://github.com/facebook/react"));
+        projects.add(new Project("react-native", "https://github.com/facebook/react-native"));
+        projects.add(new Project("typo3", "https://review.typo3.org/"));
+        projects.add(new Project("revealjs", "https://api.github.com/repos/hakimel/reveal.js"));
+        projects.add(new Project("vue", "https://api.github.com/repos/vuejs/vue"));
+        projects.add(new Project("ionic", "https://api.github.com/repos/ionic-team/ionic"));
+        projects.add(new Project("requests", "https://api.github.com/repos/requests/requests"));
+        projects.add(new Project("webpack", "https://api.github.com/repos/webpack/webpack"));
+        projects.add(new Project("redux", "https://api.github.com/repos/reactjs/redux"));
+        projects.add(new Project("oh-my-zsh", "https://api.github.com/repos/robbyrussell/oh-my-zsh"));
         projects.add(new Project("atom", "https://api.github.com/repos/atom/atom"));
         projects.add(new Project("django", "https://api.github.com/repos/django/django"));
         projects.add(new Project("jekyll", "https://api.github.com/repos/jekyll/jekyll"));
@@ -109,27 +100,20 @@ public class InitialLoader implements CommandLineRunner {
         projects.add(new Project("scilab", "https://codereview.scilab.org/"));
         projects.add(new Project("libreoffice", "https://gerrit.libreoffice.org/"));
         projects.add(new Project("gerrit", "https://gerrit-review.googlesource.com"));
-
-
-        /*
-            To be mined projects
-         */
-
-        //        projects.add(new Project("homebrew-core", "https://api.github.com/repos/Homebrew/homebrew-core"));
-        //        projects.add(new Project("yarn", "https://api.github.com/repos/yarnpkg/yarn"));
-        //        projects.add(new Project("brackets", "https://api.github.com/repos/adobe/brackets"));
-        //        projects.add(new Project("kubernetes", "https://api.github.com/repos/kubernetes/kubernetes"));
-
-        //        projects.add(new Project("bootstrap", "https://api.github.com/repos/twbs/bootstrap"));
-        //        projects.add(new Project("spring-boot", "https://api.github.com/repos/spring-projects/spring-boot"));
-        //        projects.add(new Project("opencv", "https://api.github.com/repos/opencv/opencv"));
-        //        projects.add(new Project("spark", "https://api.github.com/repos/apache/spark"));
-        //        projects.add(new Project("moby", "https://api.github.com/repos/moby/moby"));
-        //        projects.add(new Project("cgm-remote-monitor", "https://api.github.com/repos/nightscout/cgm-remote-monitor"));
-        //        projects.add(new Project("scikit-learn", "https://api.github.com/repos/scikit-learn/scikit-learn"));
-        //        projects.add(new Project("spring-framework", "https://api.github.com/repos/spring-projects/spring-framework"));
-        //        projects.add(new Project("bitcoin", "https://api.github.com/repos/bitcoin/bitcoin"));
-        //        projects.add(new Project("redis", "https://api.github.com/repos/antirez/redis"));
+        projects.add(new Project("homebrew-core", "https://api.github.com/repos/Homebrew/homebrew-core"));
+        projects.add(new Project("yarn", "https://api.github.com/repos/yarnpkg/yarn"));
+        projects.add(new Project("brackets", "https://api.github.com/repos/adobe/brackets"));
+        projects.add(new Project("kubernetes", "https://api.github.com/repos/kubernetes/kubernetes"));
+        projects.add(new Project("bootstrap", "https://api.github.com/repos/twbs/bootstrap"));
+        projects.add(new Project("spring-boot", "https://api.github.com/repos/spring-projects/spring-boot"));
+        projects.add(new Project("opencv", "https://api.github.com/repos/opencv/opencv"));
+        projects.add(new Project("spark", "https://api.github.com/repos/apache/spark"));
+        projects.add(new Project("moby", "https://api.github.com/repos/moby/moby"));
+        projects.add(new Project("cgm-remote-monitor", "https://api.github.com/repos/nightscout/cgm-remote-monitor"));
+        projects.add(new Project("scikit-learn", "https://api.github.com/repos/scikit-learn/scikit-learn"));
+        projects.add(new Project("spring-framework", "https://api.github.com/repos/spring-projects/spring-framework"));
+        projects.add(new Project("bitcoin", "https://api.github.com/repos/bitcoin/bitcoin"));
+        projects.add(new Project("redis", "https://api.github.com/repos/antirez/redis"));
 
 
         for (Project project : projects) {
@@ -181,17 +165,6 @@ public class InitialLoader implements CommandLineRunner {
             output = "";
         }
 
-
-//        for (Project x : projects) {
-//            System.out.println("Processing project: " + x.getName());
-//            dataLoader.deleteData();
-//            try {
-//                dataLoader.fetchData(x.getName(), x.getProjectUrl());
-//            } catch (Exception ex) {
-//                logger.error(ex);
-//                dataLoader.saveDataToFile(x.getName());
-//            }
-//        }
     }
 
     /**
@@ -355,13 +328,6 @@ public class InitialLoader implements CommandLineRunner {
         printLine("Top-5 accuracy: " + ((double) top5Counter / (double) iterationsCounter) * 100d + "%");
         printLine("Top-10 accuracy: " + ((double) top10Counter / (double) iterationsCounter) * 100d + "%");
         printLine("Mean Reciprocal Rank: " + mrrValue / iterationsCounter);
-
-//        printLine("top1Counter: " + top1Counter);
-//        printLine("top3Counter: " + top3Counter);
-//        printLine("top5Counter: " + top5Counter);
-//        printLine("top10Counter: " + top10Counter);
-//        printLine("mrrValue: " + mrrValue);
-//        printLine("iterationsCounter: " + iterationsCounter);
         printLine("_____________________________________________");
     }
 
