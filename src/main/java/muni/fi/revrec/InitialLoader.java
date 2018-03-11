@@ -64,20 +64,20 @@ public class InitialLoader implements CommandLineRunner {
             Tested projects
          */
         projects.add(new Project("android", "https://android-review.googlesource.com/"));
-        projects.add(new Project("angular.js", "https://github.com/angular/angular.js"));
+        projects.add(new Project("angular.js", "https://api.github.com/repos/angular/angular.js"));
         projects.add(new Project("angular", "https://api.github.com/repos/angular/angular"));
         projects.add(new Project("chromium", "https://chromium-review.googlesource.com"));
         projects.add(new Project("eclipse", "https://git.eclipse.org/r/"));
         projects.add(new Project("gem5", "https://gem5-review.googlesource.com"));
         projects.add(new Project("go", "https://go-review.googlesource.com"));
         projects.add(new Project("gwt", "https://gwt-review.googlesource.com"));
-        projects.add(new Project("jquery", "https://github.com/jquery/jquery"));
+        projects.add(new Project("jquery", "https://api.github.com/repos/jquery/jquery"));
         projects.add(new Project("kitware", "http://review.source.kitware.com/"));
         projects.add(new Project("lineageos", "https://review.lineageos.org/"));
         projects.add(new Project("openstack", "https://review.openstack.org/"));
         projects.add(new Project("qt", "https://codereview.qt-project.org"));
-        projects.add(new Project("react", "https://github.com/facebook/react"));
-        projects.add(new Project("react-native", "https://github.com/facebook/react-native"));
+        projects.add(new Project("react", "https://api.github.com/repos/facebook/react"));
+        projects.add(new Project("react-native", "https://api.github.com/repos/facebook/react-native"));
         projects.add(new Project("typo3", "https://review.typo3.org/"));
         projects.add(new Project("revealjs", "https://api.github.com/repos/hakimel/reveal.js"));
         projects.add(new Project("vue", "https://api.github.com/repos/vuejs/vue"));
