@@ -56,7 +56,7 @@ public class InitialLoader implements CommandLineRunner {
 
     @Override
     public void run(String... strings) {
-        String[] mailAddresses = {"jakublipcak@gmail.com"};
+        String[] mailAddresses = {};
 
         List<Project> projects = new ArrayList<>();
 
