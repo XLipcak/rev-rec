@@ -1,16 +1,9 @@
-# Optimal Recommendations for Source Code Reviews
+# A Large-Scale Study on Source Code Reviewer Recommendation
 This project deals with optimal recommendations of source code reviewers for open source projects. It contains the implementation of RevFinder algorithm (http://ieeexplore.ieee.org/document/7081824/), ReviewBot algorithm (https://labs.vmware.com/download/198/) and of a novel Naive Bayes-based <i>Code Reviewers Recommendation Algorithm</i>.
 
-## Configure Database and import data:
-#### You can either:
-* Use the configuration defined in the <i>application.properties</i>. The connection is configured against the remote DB provided by Amazon Web Services. This database contains all the data which were used for testing the algorithms. However, this option is much slower than the local database and it should only be used to demonstrate the functionality of the application. Running all the test configurations against this DB is not recommended.
+#### If you use the provided source code and data set, please cite:
 
-#### or
-
-* * Download and install the [MySql Server](https://dev.mysql.com/downloads/mysql/).
-  * Create 3 schemas: <i>android</i>, <i>openstack</i> and <i>qt</i>.
-  * Import the data from our [import scripts](https://github.com/XLipcak/rev-rec/tree/master/data/sql).
-  * Set your database connection settings in the <i>application.properties</i> 
+> Lipcak, J., Rossi, B. (2018) A Large-Scale Study on Source Code Reviewer Recommendation, in 44th Euromicro Conference on Software Engineering and Advanced Applications (SEAA) 2018, IEEE.
 
 ## Build and Run:
 #### The aplication has the following requirements:
